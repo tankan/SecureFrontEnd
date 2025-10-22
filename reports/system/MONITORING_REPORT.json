@@ -1,0 +1,91 @@
+{
+  "timestamp": "2025-10-20T12:53:14.592Z",
+  "period": "24 hours",
+  "summary": {
+    "totalRequests": 55,
+    "totalErrors": 3,
+    "errorRate": 5.454545454545454,
+    "avgResponseTime": 440.357208932789,
+    "activeAlerts": 2,
+    "securityEvents": 3
+  },
+  "performance": {
+    "avgMemoryUsage": 0,
+    "avgCpuUsage": 0
+  },
+  "security": {
+    "events": [
+      {
+        "timestamp": "2025-10-20T12:53:11.572Z",
+        "type": "authentication_failure",
+        "description": "多次登录失败",
+        "metadata": {
+          "ip": "192.168.1.100",
+          "attempts": 5
+        },
+        "severity": "medium"
+      },
+      {
+        "timestamp": "2025-10-20T12:53:11.573Z",
+        "type": "injection_attempt",
+        "description": "检测到SQL注入尝试",
+        "metadata": {
+          "ip": "10.0.0.50",
+          "payload": "'; DROP TABLE users; --"
+        },
+        "severity": "high"
+      },
+      {
+        "timestamp": "2025-10-20T12:53:11.575Z",
+        "type": "brute_force",
+        "description": "暴力破解攻击",
+        "metadata": {
+          "ip": "203.0.113.10",
+          "attempts": 100
+        },
+        "severity": "high"
+      }
+    ],
+    "eventsByType": {
+      "authentication_failure": 1,
+      "injection_attempt": 1,
+      "brute_force": 1
+    }
+  },
+  "alerts": [
+    {
+      "id": "alert_1760964791574_i0v1zgvn8",
+      "timestamp": "2025-10-20T12:53:11.574Z",
+      "type": "security",
+      "message": "High severity security event: 检测到SQL注入尝试",
+      "metadata": {
+        "timestamp": "2025-10-20T12:53:11.573Z",
+        "type": "injection_attempt",
+        "description": "检测到SQL注入尝试",
+        "metadata": {
+          "ip": "10.0.0.50",
+          "payload": "'; DROP TABLE users; --"
+        },
+        "severity": "high"
+      },
+      "status": "active"
+    },
+    {
+      "id": "alert_1760964791575_1rji9lsfu",
+      "timestamp": "2025-10-20T12:53:11.576Z",
+      "type": "security",
+      "message": "High severity security event: 暴力破解攻击",
+      "metadata": {
+        "timestamp": "2025-10-20T12:53:11.575Z",
+        "type": "brute_force",
+        "description": "暴力破解攻击",
+        "metadata": {
+          "ip": "203.0.113.10",
+          "attempts": 100
+        },
+        "severity": "high"
+      },
+      "status": "active"
+    }
+  ]
+}

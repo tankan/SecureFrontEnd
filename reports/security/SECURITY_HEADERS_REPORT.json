@@ -1,0 +1,122 @@
+{
+  "timestamp": 1760968199793,
+  "configuration": {
+    "environment": "production",
+    "enabledHeaders": [
+      "enableCSP",
+      "enableHSTS",
+      "enableFrameOptions",
+      "enableContentTypeOptions",
+      "enableReferrerPolicy",
+      "enablePermissionsPolicy"
+    ]
+  },
+  "usage": {
+    "headerStats": {
+      "Content-Security-Policy": {
+        "usageCount": 3,
+        "firstUsed": "2025-10-20T13:49:59.781Z",
+        "lastUsed": "2025-10-20T13:49:59.789Z"
+      },
+      "Strict-Transport-Security": {
+        "usageCount": 3,
+        "firstUsed": "2025-10-20T13:49:59.782Z",
+        "lastUsed": "2025-10-20T13:49:59.790Z"
+      },
+      "X-Frame-Options": {
+        "usageCount": 3,
+        "firstUsed": "2025-10-20T13:49:59.782Z",
+        "lastUsed": "2025-10-20T13:49:59.791Z"
+      },
+      "X-Content-Type-Options": {
+        "usageCount": 3,
+        "firstUsed": "2025-10-20T13:49:59.783Z",
+        "lastUsed": "2025-10-20T13:49:59.791Z"
+      },
+      "Referrer-Policy": {
+        "usageCount": 3,
+        "firstUsed": "2025-10-20T13:49:59.783Z",
+        "lastUsed": "2025-10-20T13:49:59.791Z"
+      },
+      "Permissions-Policy": {
+        "usageCount": 2,
+        "firstUsed": "2025-10-20T13:49:59.784Z",
+        "lastUsed": "2025-10-20T13:49:59.785Z"
+      },
+      "Cross-Origin-Embedder-Policy": {
+        "usageCount": 2,
+        "firstUsed": "2025-10-20T13:49:59.785Z",
+        "lastUsed": "2025-10-20T13:49:59.785Z"
+      },
+      "Cross-Origin-Opener-Policy": {
+        "usageCount": 2,
+        "firstUsed": "2025-10-20T13:49:59.785Z",
+        "lastUsed": "2025-10-20T13:49:59.785Z"
+      },
+      "Cross-Origin-Resource-Policy": {
+        "usageCount": 2,
+        "firstUsed": "2025-10-20T13:49:59.785Z",
+        "lastUsed": "2025-10-20T13:49:59.785Z"
+      },
+      "X-XSS-Protection": {
+        "usageCount": 1,
+        "firstUsed": "2025-10-20T13:49:59.785Z",
+        "lastUsed": "2025-10-20T13:49:59.785Z"
+      }
+    },
+    "nonceGenerated": 3,
+    "activeNonces": 3
+  },
+  "cspAnalysis": {
+    "timestamp": 1760968199793,
+    "totalViolations": 3,
+    "violationsByDirective": {
+      "script-src": 1,
+      "img-src": 1,
+      "style-src": 1
+    },
+    "violationsBySource": {
+      "https://malicious-site.com/script.js": 1,
+      "http://insecure-cdn.com/image.jpg": 1,
+      "inline": 1
+    },
+    "topViolatedDirectives": [
+      {
+        "directive": "script-src",
+        "count": 1
+      },
+      {
+        "directive": "img-src",
+        "count": 1
+      },
+      {
+        "directive": "style-src",
+        "count": 1
+      }
+    ],
+    "topBlockedUris": [
+      {
+        "uri": "https://malicious-site.com/script.js",
+        "count": 1
+      },
+      {
+        "uri": "http://insecure-cdn.com/image.jpg",
+        "count": 1
+      },
+      {
+        "uri": "inline",
+        "count": 1
+      }
+    ],
+    "recommendations": [
+      "考虑使用nonce或hash来允许内联脚本，而不是unsafe-inline",
+      "考虑将内联样式移到外部文件或使用nonce",
+      "检查图片来源，考虑添加可信的CDN域名",
+      "审查外部资源依赖，考虑将其添加到CSP白名单或寻找替代方案"
+    ]
+  },
+  "securityScore": 90,
+  "recommendations": [
+    "生产环境中移除unsafe-eval指令"
+  ]
+}

@@ -1,0 +1,414 @@
+# GitLab CI/CD Pipeline Configuration
+# 复制此文件到项目根目录并重命名为 .gitlab-ci.yml
+
+stages:
+  - validate
+  - test
+  - build
+  - security
+  - deploy
+  - cleanup
+
+variables:
+  NODE_VERSION: "18"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  REGISTRY: $CI_REGISTRY
+  IMAGE_NAME: $CI_REGISTRY_IMAGE
+  CACHE_KEY: "$CI_COMMIT_REF_SLUG-$CI_PROJECT_DIR"
+
+# 缓存配置
+.cache_template: &cache_template
+  cache:
+    key: $CACHE_KEY
+    paths:
+      - node_modules/
+      - .npm/
+    policy: pull
+
+.cache_push_template: &cache_push_template
+  cache:
+    key: $CACHE_KEY
+    paths:
+      - node_modules/
+      - .npm/
+    policy: push
+
+# Node.js基础模板
+.node_template: &node_template
+  image: node:$NODE_VERSION-alpine
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+
+# Docker基础模板
+.docker_template: &docker_template
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+# 安装依赖
+install_dependencies:
+  stage: validate
+  <<: *node_template
+  <<: *cache_push_template
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npm audit --audit-level moderate
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 hour
+  only:
+    - merge_requests
+    - main
+    - develop
+    - staging
+
+# 代码质量检查
+code_quality:
+  stage: validate
+  <<: *node_template
+  <<: *cache_template
+  needs: ["install_dependencies"]
+  script:
+    - npm run lint
+  artifacts:
+    reports:
+      codequality: reports/code-quality/codequality.json
+    paths:
+      - reports/code-quality/
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+    - staging
+
+# 安全检查
+security_audit:
+  stage: security
+  <<: *node_template
+  <<: *cache_template
+  needs: ["install_dependencies"]
+  script:
+    - npm run security
+    - npm run test:security
+  artifacts:
+    reports:
+      sast: reports/security/sast.json
+    paths:
+      - reports/security/
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+    - staging
+
+# 单元测试
+unit_tests:
+  stage: test
+  <<: *node_template
+  <<: *cache_template
+  needs: ["install_dependencies"]
+  parallel:
+    matrix:
+      - NODE_VERSION: ["16", "18", "20"]
+  script:
+    - npm run test:unit
+  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+  artifacts:
+    reports:
+      junit: reports/unit/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    paths:
+      - coverage/
+      - reports/unit/
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+    - staging
+
+# 集成测试
+integration_tests:
+  stage: test
+  <<: *node_template
+  <<: *cache_template
+  needs: ["unit_tests"]
+  services:
+    - redis:7-alpine
+  variables:
+    REDIS_URL: "redis://redis:6379"
+  script:
+    - npm run test:integration
+  artifacts:
+    reports:
+      junit: reports/integration/junit.xml
+    paths:
+      - reports/integration/
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+    - staging
+
+# 性能测试
+performance_tests:
+  stage: test
+  <<: *node_template
+  <<: *cache_template
+  needs: ["integration_tests"]
+  script:
+    - npm run test:performance
+  artifacts:
+    reports:
+      performance: reports/performance/performance.json
+    paths:
+      - reports/performance/
+    expire_in: 1 week
+  only:
+    - main
+    - develop
+    - staging
+
+# 构建应用 - Development
+build_development:
+  stage: build
+  <<: *node_template
+  <<: *cache_template
+  needs: ["code_quality", "security_audit", "unit_tests"]
+  script:
+    - NODE_ENV=development npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 day
+  only:
+    - develop
+
+# 构建应用 - Staging
+build_staging:
+  stage: build
+  <<: *node_template
+  <<: *cache_template
+  needs: ["code_quality", "security_audit", "unit_tests"]
+  script:
+    - NODE_ENV=staging npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+  only:
+    - staging
+
+# 构建应用 - Production
+build_production:
+  stage: build
+  <<: *node_template
+  <<: *cache_template
+  needs: ["code_quality", "security_audit", "unit_tests"]
+  script:
+    - npm run build:prod
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 month
+  only:
+    - main
+
+# Docker镜像构建
+docker_build:
+  stage: build
+  <<: *docker_template
+  needs: ["build_production"]
+  script:
+    - docker build -f config/docker/Dockerfile -t $IMAGE_NAME:$CI_COMMIT_SHA .
+    - docker tag $IMAGE_NAME:$CI_COMMIT_SHA $IMAGE_NAME:latest
+    - docker push $IMAGE_NAME:$CI_COMMIT_SHA
+    - docker push $IMAGE_NAME:latest
+  only:
+    - main
+    - staging
+
+# 容器安全扫描
+container_security:
+  stage: security
+  image: 
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  needs: ["docker_build"]
+  script:
+    - trivy image --format template --template "@contrib/gitlab.tpl" -o gl-container-scanning-report.json $IMAGE_NAME:$CI_COMMIT_SHA
+  artifacts:
+    reports:
+      container_scanning: gl-container-scanning-report.json
+    expire_in: 1 week
+  only:
+    - main
+    - staging
+
+# 端到端测试
+e2e_tests:
+  stage: test
+  <<: *node_template
+  <<: *cache_template
+  needs: ["docker_build"]
+  services:
+    - name: $IMAGE_NAME:$CI_COMMIT_SHA
+      alias: app
+  variables:
+    BASE_URL: "http://app:3000"
+  script:
+    - sleep 30
+    - npm run test:e2e
+  artifacts:
+    reports:
+      junit: reports/e2e/junit.xml
+    paths:
+      - reports/e2e/
+    expire_in: 1 week
+  only:
+    - main
+    - staging
+
+# 部署到Staging
+deploy_staging:
+  stage: deploy
+  <<: *node_template
+  <<: *cache_template
+  needs: ["integration_tests", "performance_tests", "docker_build"]
+  environment:
+    name: staging
+    url: https://staging.secure-frontend.com
+  script:
+    - npm run deploy:staging
+  after_script:
+    - sleep 30
+    - curl -f https://staging.secure-frontend.com/health
+  only:
+    - staging
+  when: manual
+
+# 部署到Production
+deploy_production:
+  stage: deploy
+  <<: *node_template
+  <<: *cache_template
+  needs: ["e2e_tests", "container_security"]
+  environment:
+    name: production
+    url: https://secure-frontend.com
+  script:
+    - npm run deploy:prod
+  after_script:
+    - sleep 60
+    - curl -f https://secure-frontend.com/health
+  only:
+    - main
+  when: manual
+
+# 创建发布标签
+create_release:
+  stage: deploy
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs: ["deploy_production"]
+  script:
+    - echo "Creating release for $CI_COMMIT_SHA"
+  release:
+    tag_name: 'v$CI_PIPELINE_IID'
+    description: |
+      Automated release from commit $CI_COMMIT_SHA
+      
+      Changes in this release:
+      $CI_COMMIT_MESSAGE
+    ref: '$CI_COMMIT_SHA'
+  only:
+    - main
+
+# 清理旧的镜像
+cleanup_registry:
+  stage: cleanup
+  image: 
+    name: alpine/curl:latest
+    entrypoint: [""]
+  needs: ["deploy_production"]
+  script:
+    - |
+      # 保留最新的10个镜像，删除其他的
+      IMAGES=$(curl -s -H "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/registry/repositories" | \
+        jq -r '.[].id')
+      
+      for IMAGE_ID in $IMAGES; do
+        TAGS=$(curl -s -H "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/registry/repositories/$IMAGE_ID/tags" | \
+          jq -r 'sort_by(.created_at) | reverse | .[10:] | .[].name')
+        
+        for TAG in $TAGS; do
+          curl -X DELETE -H "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
+            "$CI_API_V4_URL/projects/$CI_PROJECT_ID/registry/repositories/$IMAGE_ID/tags/$TAG"
+        done
+      done
+  only:
+    - main
+  when: manual
+
+# 回滚部署
+rollback_production:
+  stage: deploy
+  <<: *node_template
+  <<: *cache_template
+  environment:
+    name: production
+    url: https://secure-frontend.com
+  script:
+    - npm run rollback
+  after_script:
+    - sleep 60
+    - curl -f https://secure-frontend.com/health
+  only:
+    - main
+  when: manual
+
+# 通知配置
+.notification_template: &notification_template
+  after_script:
+    - |
+      if [ "$CI_JOB_STATUS" = "success" ]; then
+        STATUS_EMOJI="✅"
+        STATUS_COLOR="good"
+      else
+        STATUS_EMOJI="❌"
+        STATUS_COLOR="danger"
+      fi
+      
+      curl -X POST -H 'Content-type: application/json' \
+        --data "{
+          \"text\": \"$STATUS_EMOJI $CI_PROJECT_NAME - $CI_JOB_NAME\",
+          \"attachments\": [{
+            \"color\": \"$STATUS_COLOR\",
+            \"fields\": [
+              {\"title\": \"Branch\", \"value\": \"$CI_COMMIT_REF_NAME\", \"short\": true},
+              {\"title\": \"Commit\", \"value\": \"$CI_COMMIT_SHORT_SHA\", \"short\": true},
+              {\"title\": \"Author\", \"value\": \"$CI_COMMIT_AUTHOR\", \"short\": true},
+              {\"title\": \"Pipeline\", \"value\": \"$CI_PIPELINE_URL\", \"short\": true}
+            ]
+          }]
+        }" \
+        $SLACK_WEBHOOK_URL
+
+# 应用通知到关键任务
+deploy_staging:
+  <<: *notification_template
+  extends: deploy_staging
+
+deploy_production:
+  <<: *notification_template
+  extends: deploy_production

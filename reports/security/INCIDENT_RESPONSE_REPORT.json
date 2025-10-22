@@ -1,0 +1,196 @@
+{
+  "reportId": "14747154-14e0-48e0-832e-68a44c082c4d",
+  "timestamp": "2025-10-20T14:23:50.882Z",
+  "reportPeriod": "24小时",
+  "metrics": {
+    "totalIncidents": 5,
+    "resolvedIncidents": 2,
+    "averageResponseTime": 329.5,
+    "criticalIncidents": 1
+  },
+  "activeIncidents": [
+    {
+      "id": "f35caf7b-c8f7-4112-b002-cec32c818b27",
+      "reportTime": "2025-10-20T14:23:49.209Z",
+      "reporter": "security_monitor",
+      "title": "客户数据库疑似泄露",
+      "description": "监控系统检测到异常的数据库查询活动，可能存在数据泄露风险",
+      "indicators": [
+        "异常数据访问",
+        "大量数据下载",
+        "未授权登录"
+      ],
+      "affectedSystems": [
+        "customer_database",
+        "web_application"
+      ],
+      "affectedUsers": 50000,
+      "estimatedLoss": 500000,
+      "systemImpact": "high",
+      "status": "recovering",
+      "classification": {
+        "incidentId": "9563115e-4428-4f73-a2ee-27ae82099116",
+        "timestamp": "2025-10-20T14:23:49.210Z",
+        "type": "data_breach",
+        "severity": "high",
+        "category": "confidentiality",
+        "confidence": 1
+      },
+      "responseId": "f01c14ad-ac25-4ca4-a953-0fa62984f75e",
+      "notes": "系统恢复中",
+      "lastUpdated": "2025-10-20T14:23:49.545Z"
+    },
+    {
+      "id": "ff96aac4-3a88-4067-9b19-d5698faaf065",
+      "reportTime": "2025-10-20T14:23:49.546Z",
+      "reporter": "it_admin",
+      "title": "恶意软件感染多台工作站",
+      "description": "防病毒软件报告多台员工工作站感染勒索软件",
+      "indicators": [
+        "系统异常",
+        "文件被加密",
+        "网络流量异常"
+      ],
+      "affectedSystems": [
+        "workstations",
+        "file_server"
+      ],
+      "affectedUsers": 200,
+      "estimatedLoss": 100000,
+      "systemImpact": "medium",
+      "status": "resolved",
+      "classification": {
+        "incidentId": "d6a8f4e9-0fff-4078-b3d8-b94d6be7055d",
+        "timestamp": "2025-10-20T14:23:49.546Z",
+        "type": "malware_infection",
+        "severity": "medium",
+        "category": "integrity",
+        "confidence": 0.9
+      },
+      "responseId": "4ea7b73d-3831-4f31-8ac6-7ed911220cd7",
+      "notes": "事件已成功解决",
+      "lastUpdated": "2025-10-20T14:23:49.876Z"
+    },
+    {
+      "id": "ae3646f2-2346-4f92-94bf-62e5c360966e",
+      "reportTime": "2025-10-20T14:23:49.876Z",
+      "reporter": "ops_team",
+      "title": "DDoS攻击导致服务中断",
+      "description": "网站遭受大规模DDoS攻击，服务完全不可用",
+      "indicators": [
+        "服务不可用",
+        "网络拥塞",
+        "响应时间过长"
+      ],
+      "affectedSystems": [
+        "web_servers",
+        "load_balancer"
+      ],
+      "affectedUsers": 100000,
+      "estimatedLoss": 200000,
+      "systemImpact": "critical",
+      "status": "recovering",
+      "classification": {
+        "incidentId": "59233648-6140-4253-9500-7f60e5a998d9",
+        "timestamp": "2025-10-20T14:23:49.876Z",
+        "type": "ddos_attack",
+        "severity": "critical",
+        "category": "availability",
+        "confidence": 1
+      },
+      "responseId": "713bf449-5be2-486d-aed1-1ed4e6c04734",
+      "notes": "系统恢复中",
+      "lastUpdated": "2025-10-20T14:23:50.203Z"
+    },
+    {
+      "id": "a12cc293-13b5-48a9-987c-712201a06170",
+      "reportTime": "2025-10-20T14:23:50.204Z",
+      "reporter": "security_analyst",
+      "title": "员工账户异常活动",
+      "description": "检测到员工账户在非工作时间进行大量敏感数据访问",
+      "indicators": [
+        "异常访问模式",
+        "权限提升",
+        "数据异常访问"
+      ],
+      "affectedSystems": [
+        "hr_system",
+        "finance_system"
+      ],
+      "affectedUsers": 10,
+      "estimatedLoss": 50000,
+      "systemImpact": "medium",
+      "status": "resolved",
+      "classification": {
+        "incidentId": "ca8de24b-e6e4-44eb-978e-8e0109c1bab6",
+        "timestamp": "2025-10-20T14:23:50.204Z",
+        "type": "insider_threat",
+        "severity": "medium",
+        "category": "confidentiality",
+        "confidence": 0.9
+      },
+      "responseId": "9caf6569-e34f-47e8-88c5-bca97583f8d5",
+      "notes": "事件已成功解决",
+      "lastUpdated": "2025-10-20T14:23:50.533Z"
+    },
+    {
+      "id": "ac81acb9-6749-4ae1-bc01-aee57ea7f346",
+      "reportTime": "2025-10-20T14:23:50.535Z",
+      "reporter": "email_security",
+      "title": "钓鱼邮件攻击活动",
+      "description": "多名员工收到伪装成银行的钓鱼邮件，部分员工可能已点击",
+      "indicators": [
+        "可疑邮件",
+        "异常登录",
+        "凭据泄露"
+      ],
+      "affectedSystems": [
+        "email_system",
+        "user_accounts"
+      ],
+      "affectedUsers": 500,
+      "estimatedLoss": 25000,
+      "systemImpact": "low",
+      "status": "recovering",
+      "classification": {
+        "incidentId": "758aa362-32e1-4cf2-bc52-c3fe7e0df535",
+        "timestamp": "2025-10-20T14:23:50.535Z",
+        "type": "phishing_attack",
+        "severity": "medium",
+        "category": "confidentiality",
+        "confidence": 0.9
+      },
+      "responseId": "07f76398-7ac1-496a-b407-2bde6bfa84be",
+      "notes": "系统恢复中",
+      "lastUpdated": "2025-10-20T14:23:50.873Z"
+    }
+  ],
+  "incidentSummary": {
+    "total": 5,
+    "byStatus": {
+      "recovering": 3,
+      "resolved": 2
+    },
+    "bySeverity": {
+      "high": 1,
+      "medium": 3,
+      "critical": 1
+    },
+    "byType": {
+      "data_breach": 1,
+      "malware_infection": 1,
+      "ddos_attack": 1,
+      "insider_threat": 1,
+      "phishing_attack": 1
+    }
+  },
+  "responseEffectiveness": {
+    "resolutionRate": "40.00%",
+    "averageResponseTime": "0.00小时",
+    "effectiveness": "fair",
+    "score": "100.0"
+  },
+  "recommendations": [
+    "响应效果良好，继续保持"
+  ]
+}

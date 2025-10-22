@@ -1,0 +1,75 @@
+{
+  "auditId": "AUDIT_1760970419229_4E5LC6",
+  "timestamp": "2025-10-20T14:26:59.229Z",
+  "duration": 0,
+  "overallScore": 82,
+  "complianceGrade": "B (良好)",
+  "standards": {
+    "gdpr": {
+      "standard": "GDPR",
+      "overallScore": 80,
+      "complianceRate": 50,
+      "totalChecks": 4,
+      "passedChecks": 2,
+      "failedChecks": 2,
+      "results": {},
+      "recommendations": [
+        "实施自动数据清理策略",
+        "加强数据分类和标记",
+        "开发数据导出功能",
+        "实施自动化数据删除"
+      ]
+    },
+    "pciDss": {
+      "standard": "PCI DSS",
+      "overallScore": 81,
+      "complianceRate": 67,
+      "totalRequirements": 6,
+      "passedRequirements": 4,
+      "failedRequirements": 2,
+      "results": {},
+      "remediation": [
+        "实施完整的PAN屏蔽机制",
+        "自动化数据保留策略执行",
+        "提高代码审查覆盖率至100%",
+        "建立漏洞快速响应机制"
+      ]
+    },
+    "sox": {
+      "standard": "SOX",
+      "overallScore": 84,
+      "effectivenessRate": 80,
+      "totalControls": 5,
+      "effectiveControls": 4,
+      "ineffectiveControls": 1,
+      "results": {},
+      "recommendations": [
+        "完善变更测试文档模板",
+        "建立紧急变更审批流程"
+      ]
+    }
+  },
+  "summary": {
+    "totalChecks": 15,
+    "passedChecks": 10,
+    "criticalIssues": 0,
+    "recommendations": [
+      "实施自动数据清理策略",
+      "加强数据分类和标记",
+      "开发数据导出功能",
+      "实施自动化数据删除",
+      "实施完整的PAN屏蔽机制",
+      "自动化数据保留策略执行",
+      "提高代码审查覆盖率至100%",
+      "建立漏洞快速响应机制",
+      "完善变更测试文档模板",
+      "建立紧急变更审批流程"
+    ]
+  },
+  "riskAssessment": {
+    "level": "中等风险",
+    "description": "存在一些合规缺陷，需要及时改进",
+    "priority": "medium"
+  },
+  "nextAuditDate": "2026-04-20"
+}

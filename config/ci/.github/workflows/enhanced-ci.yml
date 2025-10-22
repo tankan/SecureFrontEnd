@@ -1,0 +1,350 @@
+name: Enhanced CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # 每天凌晨2点运行安全扫描
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # 代码质量检查
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality Analysis
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run ESLint
+      run: |
+        npm install -g eslint
+        eslint . --ext .js,.mjs --format json --output-file eslint-report.json || true
+        
+    - name: Run Code Quality Analysis
+      run: node scripts/runners/run-code-quality.js
+      
+    - name: Upload Code Quality Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: code-quality-report
+        path: |
+          CODE_QUALITY_REPORT.json
+          eslint-report.json
+
+  # 安全扫描
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scanning
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run npm audit
+      run: npm audit --audit-level moderate --json > npm-audit.json || true
+      
+    - name: Run Security Audit
+      run: node scripts/runners/run-security-audit.js
+      
+    - name: Run Snyk Security Test
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=medium --json > snyk-report.json
+      continue-on-error: true
+      
+    - name: Upload Security Reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-reports
+        path: |
+          npm-audit.json
+          snyk-report.json
+          SECURITY_AUDIT_REPORT.json
+
+  # 单元测试和集成测试
+  test:
+    runs-on: ubuntu-latest
+    name: Testing
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run Security Tests
+      run: node scripts/runners/run-security-test.js
+      
+    - name: Run Integration Tests
+      run: node scripts/runners/run-integration-test.js
+      
+    - name: Run Performance Tests
+      run: node scripts/runners/run-performance-test.js
+      
+    - name: Generate Test Coverage
+      run: |
+        npm install -g c8
+       run: c8 --reporter=lcov --reporter=text node scripts/runners/run-security-test.js
+        
+    - name: Upload Coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+
+  # 性能基准测试
+  performance:
+    runs-on: ubuntu-latest
+    name: Performance Benchmarking
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run Performance Benchmark
+      run: node --expose-gc performance-benchmark.js
+      
+    - name: Upload Performance Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-report
+        path: PERFORMANCE_REPORT.json
+
+  # Docker构建和安全扫描
+  docker-build:
+    runs-on: ubuntu-latest
+    name: Docker Build & Security Scan
+    needs: [test, security-scan]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ steps.meta.outputs.tags }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # 部署到测试环境
+  deploy-staging:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging
+    needs: [docker-build, code-quality]
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to staging
+      run: |
+        echo "Deploying to staging environment..."
+        # 这里添加实际的部署脚本
+        
+    - name: Run smoke tests
+      run: |
+        echo "Running smoke tests..."
+        # 这里添加冒烟测试脚本
+
+  # 部署到生产环境
+  deploy-production:
+    runs-on: ubuntu-latest
+    name: Deploy to Production
+    needs: [docker-build, code-quality]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to production
+      run: |
+        echo "Deploying to production environment..."
+        # 这里添加实际的部署脚本
+        
+    - name: Run health checks
+      run: |
+        echo "Running health checks..."
+        # 这里添加健康检查脚本
+
+  # 生成综合报告
+  generate-report:
+    runs-on: ubuntu-latest
+    name: Generate Comprehensive Report
+    needs: [code-quality, security-scan, test, performance]
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      
+    - name: Generate comprehensive report
+      run: |
+        echo "# CI/CD Pipeline Report" > pipeline-report.md
+        echo "## Build Information" >> pipeline-report.md
+        echo "- Branch: ${{ github.ref_name }}" >> pipeline-report.md
+        echo "- Commit: ${{ github.sha }}" >> pipeline-report.md
+        echo "- Timestamp: $(date)" >> pipeline-report.md
+        echo "" >> pipeline-report.md
+        
+        echo "## Test Results" >> pipeline-report.md
+        if [ -f "test-results.json" ]; then
+          echo "✅ Tests passed" >> pipeline-report.md
+        else
+          echo "❌ Tests failed or not found" >> pipeline-report.md
+        fi
+        
+        echo "## Security Scan Results" >> pipeline-report.md
+        if [ -f "security-reports/npm-audit.json" ]; then
+          echo "📊 Security scan completed" >> pipeline-report.md
+        else
+          echo "⚠️ Security scan not completed" >> pipeline-report.md
+        fi
+        
+        echo "## Performance Results" >> pipeline-report.md
+        if [ -f "performance-report/PERFORMANCE_REPORT.json" ]; then
+          echo "⚡ Performance benchmark completed" >> pipeline-report.md
+        else
+          echo "⚠️ Performance benchmark not completed" >> pipeline-report.md
+        fi
+        
+    - name: Upload comprehensive report
+      uses: actions/upload-artifact@v4
+      with:
+        name: pipeline-report
+        path: pipeline-report.md
+        
+    - name: Comment PR with report
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('pipeline-report.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: report
+          });
+
+  # 清理工作
+  cleanup:
+    runs-on: ubuntu-latest
+    name: Cleanup
+    needs: [generate-report]
+    if: always()
+    
+    steps:
+    - name: Clean up old artifacts
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.runId,
+          });
+          
+          // 保留最近的10个构建的artifacts
+          const oldArtifacts = artifacts.data.artifacts.slice(10);
+          
+          for (const artifact of oldArtifacts) {
+            await github.rest.actions.deleteArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: artifact.id,
+            });
+          }

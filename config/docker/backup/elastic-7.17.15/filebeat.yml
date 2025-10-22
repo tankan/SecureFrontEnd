@@ -1,0 +1,59 @@
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /var/log/*.log
+    - /var/log/app/*.log
+  fields:
+    service: secure-frontend
+    environment: staging
+  fields_under_root: true
+  multiline.pattern: '^\d{4}-\d{2}-\d{2}'
+  multiline.negate: true
+  multiline.match: after
+  scan_frequency: 10s
+  harvester_buffer_size: 16384
+  max_bytes: 10485760
+
+- type: docker
+  enabled: true
+  containers.ids:
+    - "*"
+  containers.path: "/var/lib/docker/containers"
+  containers.stream: "all"
+
+output.elasticsearch:
+  hosts: ["elasticsearch-staging:9200"]
+  index: "filebeat-staging-%{+yyyy.MM.dd}"
+  bulk_max_size: 1600
+  worker: 2
+  compression_level: 3
+  template.enabled: true
+
+setup.template.name: "filebeat-staging"
+setup.template.pattern: "filebeat-staging-*"
+setup.template.settings:
+  index.number_of_shards: 1
+  index.number_of_replicas: 0
+  index.refresh_interval: "30s"
+  index.codec: best_compression
+
+processors:
+- add_host_metadata:
+    when.not.contains.tags: forwarded
+- add_docker_metadata: ~
+- drop_fields:
+    fields: ["agent", "ecs", "host.architecture", "host.os.family"]
+
+queue.mem:
+  events: 4096
+  flush.min_events: 512
+  flush.timeout: 1s
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 3
+  permissions: 0644

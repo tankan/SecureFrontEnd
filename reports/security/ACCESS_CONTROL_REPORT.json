@@ -1,0 +1,92 @@
+{
+  "timestamp": "2025-10-20T13:55:57.848Z",
+  "summary": {
+    "totalUsers": 3,
+    "activeSessions": 4,
+    "totalRequests": 7,
+    "blockedRequests": 0,
+    "auditEvents": 5
+  },
+  "sessionManagement": {
+    "totalSessions": 4,
+    "activeSessions": 4,
+    "expiredSessions": 0,
+    "userSessions": {},
+    "deviceTypes": {},
+    "averageSessionDuration": 9,
+    "averageSessionDurationMinutes": 0
+  },
+  "rateLimiting": {
+    "totalRequests": 7,
+    "blockedRequests": 0,
+    "uniqueIPs": 2,
+    "blacklistedIPs": 0,
+    "whitelistedIPs": 0,
+    "topEndpoints": {},
+    "topIPs": {}
+  },
+  "mfaStatus": {
+    "usersWithMFA": 1,
+    "trustedDevices": 0
+  },
+  "recentAuditEvents": [
+    {
+      "timestamp": "2025-10-20T13:55:57.819Z",
+      "event": "LOGIN_SUCCESS",
+      "data": {
+        "userId": "user_1",
+        "sessionId": "d1d36e3ba3a14672b8af8779f44c44b8412c8888613960489b971e13cfeaf170",
+        "ip": "192.168.1.100"
+      },
+      "id": "c80e2747-ba69-46a0-9384-511dcf3ba063"
+    },
+    {
+      "timestamp": "2025-10-20T13:55:57.842Z",
+      "event": "RATE_LIMIT_EXCEEDED",
+      "data": {
+        "endpoint": "/api/login",
+        "ip": "192.168.1.200",
+        "timestamp": 1760968557842
+      },
+      "id": "16101ff8-97d0-4cb7-9dbd-a2c9c084ea41"
+    },
+    {
+      "timestamp": "2025-10-20T13:55:57.843Z",
+      "event": "RATE_LIMIT_EXCEEDED",
+      "data": {
+        "endpoint": "/api/login",
+        "ip": "192.168.1.200",
+        "timestamp": 1760968557843
+      },
+      "id": "ba74a289-f02c-4e7d-a596-ec792ca7feca"
+    },
+    {
+      "timestamp": "2025-10-20T13:55:57.846Z",
+      "event": "SUSPICIOUS_LOGIN",
+      "data": {
+        "userId": "user_2",
+        "ip": "192.168.1.999",
+        "reason": "Multiple failed attempts"
+      },
+      "id": "98d46cb2-048a-4e43-998a-1437d5a87c61"
+    },
+    {
+      "timestamp": "2025-10-20T13:55:57.846Z",
+      "event": "PRIVILEGE_ESCALATION",
+      "data": {
+        "userId": "user_1",
+        "action": "admin_access_attempt",
+        "ip": "192.168.1.100"
+      },
+      "id": "cf26ea53-d02f-4790-9e1b-e1eae212e8b3"
+    }
+  ],
+  "securityScore": 80,
+  "recommendations": [
+    {
+      "priority": "low",
+      "category": "RateLimit",
+      "message": "考虑实施IP黑名单机制以阻止恶意请求"
+    }
+  ]
+}

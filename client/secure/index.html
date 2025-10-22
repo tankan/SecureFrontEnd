@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安全资源加载器</title>
+    <meta name="description" content="安全前端资源解密加载系统">
+    <meta name="robots" content="noindex, nofollow">
+    
+    <!-- 安全策略 -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: blob:;
+        connect-src 'self' https:;
+        font-src 'self';
+        object-src 'none';
+        media-src 'self' blob:;
+        frame-src 'self';
+    ">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 50%;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        h1 {
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+            font-size: 1.8rem;
+        }
+
+        .subtitle {
+            color: #718096;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .auth-form {
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        input[type="text"], input[type="password"], select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus, input[type="password"]:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            margin: 1rem 0;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .progress {
+            display: none;
+            margin: 1rem 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .success {
+            background: #c6f6d5;
+            color: #2f855a;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .app-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 1000;
+        }
+
+        .debug-info {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f7fafc;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #718096;
+            text-align: left;
+            display: none;
+        }
+
+        .debug-info h4 {
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+        }
+
+        .debug-info pre {
+            background: #edf2f7;
+            padding: 0.5rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🔐</div>
+        <h1>安全资源加载器</h1>
+        <p class="subtitle">请输入凭据以访问加密资源</p>
+
+        <form class="auth-form" id="authForm">
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="resourceId">资源ID</label>
+                <input type="text" id="resourceId" name="resourceId" placeholder="可选，留空加载默认资源">
+            </div>
+            
+            <div class="form-group">
+                <label for="loadMode">加载模式</label>
+                <select id="loadMode" name="loadMode">
+                    <option value="blob">Blob对象注入</option>
+                    <option value="iframe">iframe沙箱加载</option>
+                    <option value="module">ES模块动态导入</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn" id="loginBtn">
+                登录并加载资源
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在验证身份...</p>
+        </div>
+
+        <div class="progress" id="progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">准备中...</div>
+        </div>
+
+        <div class="error" id="error"></div>
+        <div class="success" id="success"></div>
+
+        <div class="debug-info" id="debugInfo">
+            <h4>调试信息</h4>
+            <pre id="debugContent"></pre>
+        </div>
+    </div>
+
+    <div class="app-container" id="appContainer">
+        <!-- 解密后的应用将在这里加载 -->
+    </div>
+
+    <script src="crypto-loader.js"></script>
+    <script>
+        class SecureResourceLoader {
+            constructor() {
+                this.apiBaseUrl = '/api/v1';
+                this.token = null;
+                this.debugMode = new URLSearchParams(window.location.search).has('debug');
+                
+                this.initializeElements();
+                this.bindEvents();
+                
+                if (this.debugMode) {
+                    document.getElementById('debugInfo').style.display = 'block';
+                    this.log('调试模式已启用');
+                }
+            }
+
+            initializeElements() {
+                this.authForm = document.getElementById('authForm');
+                this.loginBtn = document.getElementById('loginBtn');
+                this.loading = document.getElementById('loading');
+                this.progress = document.getElementById('progress');
+                this.progressFill = document.getElementById('progressFill');
+                this.progressText = document.getElementById('progressText');
+                this.error = document.getElementById('error');
+                this.success = document.getElementById('success');
+                this.appContainer = document.getElementById('appContainer');
+                this.debugContent = document.getElementById('debugContent');
+            }
+
+            bindEvents() {
+                this.authForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleLogin();
+                });
+            }
+
+            async handleLogin() {
+                try {
+                    this.showLoading(true);
+                    this.hideMessages();
+
+                    const formData = new FormData(this.authForm);
+                    const credentials = {
+                        username: formData.get('username'),
+                        password: formData.get('password'),
+                        resourceId: formData.get('resourceId') || null,
+                        loadMode: formData.get('loadMode')
+                    };
+
+                    this.log('开始登录流程', credentials);
+
+                    // 1. 用户认证
+                    await this.authenticate(credentials);
+                    
+                    // 2. 获取资源列表
+                    const resources = await this.getResources(credentials.resourceId);
+                    
+                    // 3. 下载并解密资源
+                    await this.loadResources(resources, credentials.loadMode);
+
+                } catch (error) {
+                    this.showError(error.message);
+                    this.log('加载失败', error);
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            async authenticate(credentials) {
+                this.updateProgress(10, '正在验证身份...');
+
+                const response = await fetch(`${this.apiBaseUrl}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: credentials.username,
+                        password: credentials.password
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || '认证失败');
+                }
+
+                const result = await response.json();
+                this.token = result.token;
+                
+                this.log('认证成功', { userId: result.user.id, role: result.user.role });
+                this.updateProgress(30, '认证成功');
+            }
+
+            async getResources(resourceId) {
+                this.updateProgress(40, '获取资源列表...');
+
+                const url = resourceId 
+                    ? `${this.apiBaseUrl}/resources/${resourceId}`
+                    : `${this.apiBaseUrl}/resources`;
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || '获取资源失败');
+                }
+
+                const resources = await response.json();
+                this.log('获取资源列表', resources);
+                this.updateProgress(50, '资源列表获取成功');
+                
+                return Array.isArray(resources) ? resources : [resources];
+            }
+
+            async loadResources(resources, loadMode) {
+                this.updateProgress(60, '开始下载资源...');
+
+                for (let i = 0; i < resources.length; i++) {
+                    const resource = resources[i];
+                    const progress = 60 + (i / resources.length) * 30;
+                    
+                    this.updateProgress(progress, `正在处理资源 ${i + 1}/${resources.length}...`);
+                    
+                    await this.processResource(resource, loadMode);
+                }
+
+                this.updateProgress(100, '资源加载完成');
+                this.showSuccess('所有资源已成功加载并解密');
+                
+                // 延迟一下再显示应用
+                setTimeout(() => {
+                    this.showApplication();
+                }, 1000);
+            }
+
+            async processResource(resource, loadMode) {
+                try {
+                    // 1. 获取解密密钥
+                    const keyResponse = await fetch(`${this.apiBaseUrl}/resources/${resource.id}/key`, {
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`
+                        }
+                    });
+
+                    if (!keyResponse.ok) {
+                        throw new Error('获取解密密钥失败');
+                    }
+
+                    const keyData = await keyResponse.json();
+                    this.log('获取解密密钥', { resourceId: resource.id, algorithm: keyData.algorithm });
+
+                    // 2. 下载加密资源
+                    const resourceResponse = await fetch(resource.downloadUrl || resource.cloudPath);
+                    
+                    if (!resourceResponse.ok) {
+                        throw new Error('下载资源失败');
+                    }
+
+                    const encryptedData = await resourceResponse.arrayBuffer();
+                    this.log('下载资源完成', { size: encryptedData.byteLength });
+
+                    // 3. 解密资源
+                    const decryptedData = await this.decryptResource(encryptedData, keyData);
+                    this.log('资源解密完成', { originalSize: decryptedData.byteLength });
+
+                    // 4. 根据加载模式处理资源
+                    await this.injectResource(decryptedData, resource, loadMode);
+
+                } catch (error) {
+                    this.log('处理资源失败', { resourceId: resource.id, error: error.message });
+                    throw error;
+                }
+            }
+
+            async decryptResource(encryptedData, keyData) {
+                const cryptoLoader = new CryptoLoader();
+                
+                // 解析密钥数据
+                const key = await cryptoLoader.importKey(keyData.keyData, keyData.algorithm);
+                
+                // 解密数据
+                const decryptedData = await cryptoLoader.decrypt(encryptedData, key, keyData.algorithm);
+                
+                return decryptedData;
+            }
+
+            async injectResource(decryptedData, resource, loadMode) {
+                const fileType = resource.originalName.split('.').pop().toLowerCase();
+                
+                switch (loadMode) {
+                    case 'blob':
+                        await this.injectAsBlob(decryptedData, resource, fileType);
+                        break;
+                    case 'iframe':
+                        await this.injectAsIframe(decryptedData, resource, fileType);
+                        break;
+                    case 'module':
+                        await this.injectAsModule(decryptedData, resource, fileType);
+                        break;
+                    default:
+                        throw new Error(`不支持的加载模式: ${loadMode}`);
+                }
+            }
+
+            async injectAsBlob(decryptedData, resource, fileType) {
+                const mimeType = this.getMimeType(fileType);
+                const blob = new Blob([decryptedData], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+
+                if (fileType === 'html') {
+                    // HTML文件直接在iframe中显示
+                    const iframe = document.createElement('iframe');
+                    iframe.src = url;
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    iframe.style.border = 'none';
+                    this.appContainer.appendChild(iframe);
+                } else if (fileType === 'js') {
+                    // JavaScript文件作为脚本加载
+                    const script = document.createElement('script');
+                    script.src = url;
+                    document.head.appendChild(script);
+                } else if (fileType === 'css') {
+                    // CSS文件作为样式表加载
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = url;
+                    document.head.appendChild(link);
+                } else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileType)) {
+                    // 图片文件显示
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.style.maxWidth = '100%';
+                    this.appContainer.appendChild(img);
+                }
+
+                this.log('Blob注入完成', { resourceId: resource.id, fileType, url });
+            }
+
+            async injectAsIframe(decryptedData, resource, fileType) {
+                if (fileType === 'html') {
+                    const blob = new Blob([decryptedData], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const iframe = document.createElement('iframe');
+                    iframe.src = url;
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    iframe.style.border = 'none';
+                    iframe.sandbox = 'allow-scripts allow-same-origin allow-forms';
+                    
+                    this.appContainer.appendChild(iframe);
+                    this.log('iframe注入完成', { resourceId: resource.id, url });
+                } else {
+                    throw new Error('iframe模式仅支持HTML文件');
+                }
+            }
+
+            async injectAsModule(decryptedData, resource, fileType) {
+                if (fileType === 'js') {
+                    const code = new TextDecoder().decode(decryptedData);
+                    const blob = new Blob([code], { type: 'application/javascript' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    try {
+                        const module = await import(url);
+                        this.log('ES模块加载完成', { resourceId: resource.id, exports: Object.keys(module) });
+                        
+                        // 如果模块有默认导出且是函数，则执行它
+                        if (module.default && typeof module.default === 'function') {
+                            module.default();
+                        }
+                    } catch (error) {
+                        throw new Error(`ES模块加载失败: ${error.message}`);
+                    }
+                } else {
+                    throw new Error('ES模块模式仅支持JavaScript文件');
+                }
+            }
+
+            getMimeType(fileType) {
+                const mimeTypes = {
+                    'html': 'text/html',
+                    'js': 'application/javascript',
+                    'css': 'text/css',
+                    'png': 'image/png',
+                    'jpg': 'image/jpeg',
+                    'jpeg': 'image/jpeg',
+                    'gif': 'image/gif',
+                    'webp': 'image/webp'
+                };
+                
+                return mimeTypes[fileType] || 'application/octet-stream';
+            }
+
+            showApplication() {
+                document.querySelector('.container').style.display = 'none';
+                this.appContainer.style.display = 'block';
+            }
+
+            showLoading(show) {
+                this.loading.style.display = show ? 'block' : 'none';
+                this.progress.style.display = show ? 'block' : 'none';
+                this.loginBtn.disabled = show;
+            }
+
+            updateProgress(percent, text) {
+                this.progressFill.style.width = `${percent}%`;
+                this.progressText.textContent = text;
+            }
+
+            showError(message) {
+                this.error.textContent = message;
+                this.error.style.display = 'block';
+            }
+
+            showSuccess(message) {
+                this.success.textContent = message;
+                this.success.style.display = 'block';
+            }
+
+            hideMessages() {
+                this.error.style.display = 'none';
+                this.success.style.display = 'none';
+            }
+
+            log(message, data = null) {
+                const timestamp = new Date().toISOString();
+                const logEntry = `[${timestamp}] ${message}`;
+                
+                console.log(logEntry, data);
+                
+                if (this.debugMode) {
+                    const currentContent = this.debugContent.textContent;
+                    const newContent = currentContent + '\n' + logEntry + (data ? '\n' + JSON.stringify(data, null, 2) : '');
+                    this.debugContent.textContent = newContent;
+                    this.debugContent.scrollTop = this.debugContent.scrollHeight;
+                }
+            }
+        }
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            new SecureResourceLoader();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "secure-frontend-vue-example",
+  "version": "1.0.0",
+  "description": "Vue3示例应用 - 展示安全前端资源加密存储解决方案",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "encrypt": "node ../../scripts/encrypt.js encrypt ./dist ./encrypted --compression",
+    "upload": "node ../../scripts/upload.js ./encrypted",
+    "build-and-encrypt": "npm run build && npm run encrypt",
+    "serve-encrypted": "node ../../server/index.js"
+  },
+  "dependencies": {
+    "vue": "^3.5.22",
+    "vue-router": "^4.5.0",
+    "pinia": "^2.3.0",
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "vite": "^7.1.11",
+    "typescript": "^5.7.3",
+    "@types/node": "^22.10.5"
+  }
+}

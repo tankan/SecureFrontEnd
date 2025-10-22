@@ -1,0 +1,228 @@
+{
+  "timestamp": 1760968012321,
+  "reportType": "advanced_monitoring_demo",
+  "summary": {
+    "monitoringDuration": 1953,
+    "totalRequests": 15,
+    "totalSecurityEvents": 17,
+    "totalAnomalies": 3,
+    "overallHealthStatus": "fair"
+  },
+  "apm": {
+    "summary": {
+      "totalRequests": 15,
+      "totalErrors": 1,
+      "errorRate": "6.67",
+      "uptime": 1953,
+      "activeAlerts": 3
+    },
+    "operations": {
+      "user_login": {
+        "count": 4,
+        "avgDuration": "196.24",
+        "errorCount": 0,
+        "errorRate": "0.00"
+      },
+      "cache_lookup": {
+        "count": 2,
+        "avgDuration": "90.80",
+        "errorCount": 0,
+        "errorRate": "0.00"
+      },
+      "file_upload": {
+        "count": 3,
+        "avgDuration": "1227.30",
+        "errorCount": 1,
+        "errorRate": "33.33"
+      },
+      "api_request": {
+        "count": 5,
+        "avgDuration": "127.32",
+        "errorCount": 0,
+        "errorRate": "0.00"
+      },
+      "database_query": {
+        "count": 1,
+        "avgDuration": "327.17",
+        "errorCount": 0,
+        "errorRate": "0.00"
+      }
+    },
+    "alerts": [
+      {
+        "id": "f72a59dd-c863-428c-afbb-7480d0b1bda6",
+        "type": "slow_operation",
+        "message": "慢操作检测: file_upload 耗时 1209.690089331127ms",
+        "timestamp": 1760968010563,
+        "severity": "medium"
+      },
+      {
+        "id": "776da01a-904c-469c-b219-aad7c004a9db",
+        "type": "slow_operation",
+        "message": "慢操作检测: file_upload 耗时 1227.8306300773913ms",
+        "timestamp": 1760968011070,
+        "severity": "medium"
+      },
+      {
+        "id": "a2eac4aa-62dd-4eb2-a4a5-a277837bba15",
+        "type": "slow_operation",
+        "message": "慢操作检测: file_upload 耗时 1244.3777684956647ms",
+        "timestamp": 1760968011259,
+        "severity": "medium"
+      }
+    ]
+  },
+  "security": {
+    "summary": {
+      "totalEvents": 17,
+      "activeAlerts": 3,
+      "monitoredIPs": 4
+    },
+    "eventsByType": {
+      "successful_login": 8,
+      "failed_login": 4,
+      "sql_injection": 1,
+      "xss_attempt": 1,
+      "rate_limit_exceeded": 3
+    },
+    "topRiskyIPs": [
+      {
+        "ip": "203.0.113.1",
+        "riskScore": 17,
+        "eventCount": 6
+      },
+      {
+        "ip": "192.168.1.100",
+        "riskScore": 15,
+        "eventCount": 5
+      },
+      {
+        "ip": "198.51.100.1",
+        "riskScore": 10,
+        "eventCount": 2
+      },
+      {
+        "ip": "10.0.0.50",
+        "riskScore": 9,
+        "eventCount": 4
+      }
+    ],
+    "alerts": [
+      {
+        "id": "2889be37-d87e-4c28-ad89-95076da396a9",
+        "type": "brute_force_detected",
+        "message": "检测到暴力破解: IP 203.0.113.1 (3次尝试)",
+        "timestamp": 1760968011653,
+        "severity": "high"
+      },
+      {
+        "id": "ead5d511-ff95-4f80-8afd-d17ce0f7869b",
+        "type": "brute_force_detected",
+        "message": "检测到暴力破解: IP 203.0.113.1 (4次尝试)",
+        "timestamp": 1760968011684,
+        "severity": "high"
+      },
+      {
+        "id": "6e646c67-58b2-42a6-bed7-dfa5e0b61e76",
+        "type": "suspicious_ip",
+        "message": "可疑IP活动: 203.0.113.1 (风险评分: 17)",
+        "timestamp": 1760968011716,
+        "severity": "medium"
+      }
+    ]
+  },
+  "anomalies": {
+    "summary": {
+      "isLearning": false,
+      "learningProgress": 100,
+      "totalAnomalies": 3,
+      "monitoredMetrics": 5
+    },
+    "anomaliesByMetric": {
+      "api_response_time": [
+        {
+          "id": "3baf8063-133e-44c2-93ce-ad2c1e3a3f2a",
+          "metricName": "api_response_time",
+          "value": 1500,
+          "expectedValue": "282.54",
+          "zScore": "5.87",
+          "severity": "high",
+          "timestamp": 1760968012317
+        }
+      ],
+      "memory_usage": [
+        {
+          "id": "47d13553-75ba-4fe7-a956-e4fad5f17c74",
+          "metricName": "memory_usage",
+          "value": 95,
+          "expectedValue": "69.98",
+          "zScore": "3.69",
+          "severity": "high",
+          "timestamp": 1760968012317
+        }
+      ],
+      "cpu_usage": [
+        {
+          "id": "469f7bb9-f519-4ee7-9406-90f20c7869cf",
+          "metricName": "cpu_usage",
+          "value": 85,
+          "expectedValue": "41.97",
+          "zScore": "4.76",
+          "severity": "high",
+          "timestamp": 1760968012317
+        }
+      ]
+    },
+    "baselines": {
+      "response_time": {
+        "dataPoints": 15,
+        "mean": "374.15",
+        "stdDev": "431.19"
+      },
+      "request_count": {
+        "dataPoints": 15,
+        "mean": "1.00",
+        "stdDev": "0.00"
+      },
+      "api_response_time": {
+        "dataPoints": 37,
+        "mean": "276.25",
+        "stdDev": "207.90"
+      },
+      "memory_usage": {
+        "dataPoints": 36,
+        "mean": "69.98",
+        "stdDev": "6.78"
+      },
+      "cpu_usage": {
+        "dataPoints": 36,
+        "mean": "41.97",
+        "stdDev": "9.05"
+      }
+    }
+  },
+  "insights": [
+    {
+      "type": "performance",
+      "severity": "medium",
+      "message": "错误率较高，建议检查应用程序逻辑和错误处理"
+    },
+    {
+      "type": "security",
+      "severity": "high",
+      "message": "检测到安全威胁，建议立即审查安全策略"
+    },
+    {
+      "type": "anomaly",
+      "severity": "medium",
+      "message": "检测到多个异常，可能存在系统性能问题"
+    }
+  ],
+  "recommendations": [
+    "实施更细粒度的性能监控和告警策略",
+    "加强API安全防护，包括速率限制和输入验证",
+    "建立自动化的安全事件响应流程",
+    "定期审查和更新异常检测阈值",
+    "实施分布式追踪以更好地识别性能瓶颈"
+  ]
+}

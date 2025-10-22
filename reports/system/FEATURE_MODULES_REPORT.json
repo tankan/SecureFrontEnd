@@ -1,0 +1,49 @@
+{
+  "timestamp": "2025-10-20T13:02:02.748Z",
+  "modules": {
+    "user": {
+      "totalUsers": 2,
+      "activeSessions": 1,
+      "availableRoles": [
+        "admin",
+        "user",
+        "guest"
+      ]
+    },
+    "analytics": {
+      "totalDataPoints": 32,
+      "totalReports": 2
+    },
+    "notification": {
+      "totalNotifications": 6,
+      "totalSubscriptions": 2,
+      "availableTemplates": [
+        "security_alert",
+        "system_alert",
+        "user_action"
+      ]
+    },
+    "file": {
+      "totalFiles": 1,
+      "uploadDirectory": "uploads",
+      "allowedTypes": [
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".pdf",
+        ".txt",
+        ".doc",
+        ".docx"
+      ]
+    }
+  },
+  "summary": {
+    "totalModules": 4,
+    "activeModules": [
+      "user",
+      "analytics",
+      "notification",
+      "file"
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "reportId": "0b993c5c-96d5-4051-bbec-fb4133159f0a",
+  "timestamp": "2025-10-20T14:11:08.330Z",
+  "monitoringPeriod": "24小时",
+  "statistics": {
+    "totalRequests": 5,
+    "threatsDetected": 10,
+    "anomaliesDetected": 9,
+    "responsesExecuted": 18
+  },
+  "systemStatus": {
+    "monitoring": "active",
+    "threatDetection": "operational",
+    "anomalyDetection": "operational",
+    "autoResponse": "operational"
+  },
+  "summary": {
+    "totalEvents": 5,
+    "securityIncidents": 19,
+    "responseRate": "360.00%",
+    "systemEfficiency": "100.00%"
+  },
+  "recommendations": [
+    "优化用户行为基线模型",
+    "调整异常检测阈值"
+  ]
+}

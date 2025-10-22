@@ -1,0 +1,159 @@
+# Prometheus 告警规则配置
+groups:
+  # 系统资源告警
+  - name: system_alerts
+    rules:
+      # CPU 使用率过高
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% for more than 2 minutes on {{ $labels.instance }}"
+
+      # 内存使用率过高
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 85% on {{ $labels.instance }}"
+
+      # 磁盘空间不足
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk space is running low"
+          description: "Disk space is below 10% on {{ $labels.instance }} mount {{ $labels.mountpoint }}"
+
+  # 应用程序告警
+  - name: application_alerts
+    rules:
+      # 应用程序宕机
+      - alert: ApplicationDown
+        expr: up{job="secure-frontend-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Application is down"
+          description: "Secure Frontend application is not responding on {{ $labels.instance }}"
+
+      # HTTP 错误率过高
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) * 100 > 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP error rate"
+          description: "HTTP 5xx error rate is above 5% for {{ $labels.instance }}"
+
+      # 响应时间过长
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time"
+          description: "95th percentile response time is above 2 seconds on {{ $labels.instance }}"
+
+  # 数据库告警
+  - name: database_alerts
+    rules:
+      # PostgreSQL 连接数过多
+      - alert: PostgreSQLTooManyConnections
+        expr: pg_stat_database_numbackends / pg_settings_max_connections * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL too many connections"
+          description: "PostgreSQL connection usage is above 80% on {{ $labels.instance }}"
+
+      # Redis 内存使用率过高
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 90
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis high memory usage"
+          description: "Redis memory usage is above 90% on {{ $labels.instance }}"
+
+  # 网络和负载均衡告警
+  - name: network_alerts
+    rules:
+      # Nginx 错误率过高
+      - alert: NginxHighErrorRate
+        expr: rate(nginx_http_requests_total{status=~"4..|5.."}[5m]) / rate(nginx_http_requests_total[5m]) * 100 > 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Nginx high error rate"
+          description: "Nginx error rate is above 10% on {{ $labels.instance }}"
+
+      # SSL 证书即将过期
+      - alert: SSLCertificateExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 30
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSL certificate expiring soon"
+          description: "SSL certificate for {{ $labels.instance }} will expire in less than 30 days"
+
+  # 容器和 Docker 告警
+  - name: container_alerts
+    rules:
+      # 容器重启过于频繁
+      - alert: ContainerRestartingTooOften
+        expr: rate(container_last_seen[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container restarting too often"
+          description: "Container {{ $labels.name }} is restarting too frequently"
+
+      # 容器 CPU 使用率过高
+      - alert: ContainerHighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container high CPU usage"
+          description: "Container {{ $labels.name }} CPU usage is above 80%"
+
+  # 安全告警
+  - name: security_alerts
+    rules:
+      # 异常登录尝试
+      - alert: UnusualLoginAttempts
+        expr: rate(auth_login_attempts_total{status="failed"}[5m]) > 10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Unusual login attempts detected"
+          description: "High rate of failed login attempts detected from {{ $labels.source_ip }}"
+
+      # 加密操作失败率过高
+      - alert: HighEncryptionFailureRate
+        expr: rate(encryption_operations_total{status="failed"}[5m]) / rate(encryption_operations_total[5m]) * 100 > 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High encryption failure rate"
+          description: "Encryption failure rate is above 1% on {{ $labels.instance }}"

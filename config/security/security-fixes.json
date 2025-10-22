@@ -1,0 +1,17 @@
+{
+  "packageJsonFix": [],
+  "securityHeadersFix": [
+    {
+      "action": "add-security-headers",
+      "middleware": "helmet",
+      "description": "添加基础安全头"
+    }
+  ],
+  "cspFix": [
+    {
+      "action": "implement-csp",
+      "policy": "default-src 'self'; script-src 'self' 'nonce-{nonce}'",
+      "description": "实施内容安全策略"
+    }
+  ]
+}

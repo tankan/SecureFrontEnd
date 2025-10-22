@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  app:
+    image: ${IMAGE_NAME:-secure-frontend:1.0.0}
+    environment:
+      - NODE_ENV=staging
+      - JWT_SECRET=${JWT_SECRET}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "3000:3000"
+
+  redis:
+    image: ${REDIS_IMAGE:-redis}:${REDIS_TAG_STAGING:-7.4.6-alpine}
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres}:${POSTGRES_TAG_STAGING:-15.13-alpine}
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+
+  nginx:
+    image: ${NGINX_IMAGE:-nginx}:${NGINX_TAG_STAGING:-1.28.0-alpine}
+    ports:
+      - "8080:80"
+
+  prometheus:
+    image: ${PROM_IMAGE:-prom/prometheus}:${PROM_TAG_STAGING:-v3.7.1}
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: ${GRAFANA_IMAGE:-grafana/grafana}:${GRAFANA_TAG_STAGING:-12.2.1}
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+    ports:
+      - "3001:3000"
+
+  alertmanager:
+    image: ${ALERTMANAGER_IMAGE:-prom/alertmanager}:${ALERTMANAGER_TAG_STAGING:-v0.28.1}
+    ports:
+      - "9093:9093"
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:${FILEBEAT_VERSION:-8.19.5}
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION:-8.19.5}
+    environment:
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${ELASTIC_VERSION:-8.19.5}
+    ports:
+      - "5601:5601"
+
+  curl-healthcheck:
+    image: ${CURL_IMAGE:-curlimages/curl}:${CURL_TAG_STAGING:-8.16.0}
+    command: ["/bin/sh", "-c", "curl -s http://nginx:80 || exit 1"]

@@ -1,0 +1,159 @@
+{
+  "timestamp": "2025-10-20T14:03:58.602Z",
+  "summary": {
+    "totalAuditEvents": 2,
+    "encryptionKeys": 2,
+    "totalBackups": 4,
+    "complianceRules": 3,
+    "maskingRules": 6
+  },
+  "encryption": {
+    "totalKeys": 2,
+    "encryptedFields": [
+      "password",
+      "ssn",
+      "creditCard",
+      "bankAccount",
+      "email",
+      "phone",
+      "address",
+      "personalId"
+    ],
+    "algorithm": "aes-256-gcm",
+    "keyDerivationAlgorithm": "pbkdf2",
+    "iterations": 100000
+  },
+  "backup": {
+    "totalBackups": 4,
+    "totalKeys": 4,
+    "backupsByType": {},
+    "totalSize": 7168,
+    "oldestBackup": {
+      "id": "842037fd-fbc8-4f47-a3d4-8a2e218ecb24",
+      "backupId": "backup_001",
+      "timestamp": 1760969038420,
+      "size": 1184,
+      "status": "encrypted"
+    },
+    "newestBackup": {
+      "id": "ea456435-0712-4054-a2fa-f117f98807a5",
+      "backupId": "incremental_backup_001",
+      "timestamp": 1760969038560,
+      "size": 1632,
+      "status": "encrypted"
+    }
+  },
+  "masking": {
+    "availableRules": [
+      "email",
+      "phone",
+      "idCard",
+      "bankCard",
+      "name",
+      "address"
+    ],
+    "ruleDescriptions": [
+      {
+        "type": "email",
+        "description": "邮箱地址脱敏"
+      },
+      {
+        "type": "phone",
+        "description": "手机号码脱敏"
+      },
+      {
+        "type": "idCard",
+        "description": "身份证号脱敏"
+      },
+      {
+        "type": "bankCard",
+        "description": "银行卡号脱敏"
+      },
+      {
+        "type": "name",
+        "description": "姓名脱敏"
+      },
+      {
+        "type": "address",
+        "description": "地址脱敏"
+      }
+    ]
+  },
+  "compliance": {
+    "supportedStandards": [
+      "GDPR",
+      "PCI_DSS",
+      "HIPAA"
+    ],
+    "ruleDetails": [
+      {
+        "type": "GDPR",
+        "name": "General Data Protection Regulation",
+        "requiredEncryption": [
+          "personalId",
+          "email",
+          "phone",
+          "address"
+        ],
+        "requiredMasking": [
+          "name",
+          "email",
+          "phone"
+        ],
+        "dataRetention": 365
+      },
+      {
+        "type": "PCI_DSS",
+        "name": "Payment Card Industry Data Security Standard",
+        "requiredEncryption": [
+          "creditCard",
+          "bankAccount"
+        ],
+        "requiredMasking": [
+          "creditCard"
+        ],
+        "dataRetention": 90
+      },
+      {
+        "type": "HIPAA",
+        "name": "Health Insurance Portability and Accountability Act",
+        "requiredEncryption": [
+          "medicalRecord",
+          "ssn",
+          "personalId"
+        ],
+        "requiredMasking": [
+          "name",
+          "ssn"
+        ],
+        "dataRetention": 2555
+      }
+    ]
+  },
+  "recentAuditEvents": [
+    {
+      "timestamp": 1760969038440,
+      "operations": [
+        "encryption",
+        "masking",
+        "backup"
+      ],
+      "compliance": "GDPR",
+      "complianceRules": "General Data Protection Regulation",
+      "backupId": "b89d8392-a8ef-431b-8345-484ab6ec5e95"
+    },
+    {
+      "timestamp": 1760969038483,
+      "operations": [
+        "encryption",
+        "masking",
+        "backup"
+      ],
+      "compliance": "PCI_DSS",
+      "complianceRules": "Payment Card Industry Data Security Standard",
+      "backupId": "c483ba10-7722-44d5-800b-68c5f35de38e"
+    }
+  ],
+  "securityScore": 100,
+  "recommendations": []
+}

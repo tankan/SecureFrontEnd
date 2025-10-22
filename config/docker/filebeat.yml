@@ -1,0 +1,73 @@
+filebeat.inputs:
+- type: filestream
+  id: secure-frontend-logs
+  enabled: true
+  paths:
+    - /var/log/*.log
+    - /var/log/app/*.log
+  fields:
+    service: secure-frontend
+    environment: staging
+  fields_under_root: true
+  parsers:
+    - multiline:
+        type: pattern
+        pattern: '^\d{4}-\d{2}-\d{2}'
+        negate: true
+        match: after
+  prospector:
+    scanner:
+      frequency: 10s
+      check_interval: 1s
+  file_identity.native: ~
+  close.on_state_change.inactive: 5m
+
+- type: filestream
+  id: docker-container-logs
+  enabled: true
+  paths:
+    - '/var/lib/docker/containers/*/*.log'
+  fields:
+    service: docker-containers
+    environment: staging
+  fields_under_root: true
+  parsers:
+    - ndjson:
+        keys_under_root: true
+        add_error_key: true
+
+output.elasticsearch:
+  hosts: ["elasticsearch-staging:9200"]
+  index: "filebeat-staging-%{+yyyy.MM.dd}"
+  bulk_max_size: 1600
+  worker: 2
+  compression_level: 3
+  template.enabled: true
+
+setup.template.name: "filebeat-staging"
+setup.template.pattern: "filebeat-staging-*"
+setup.template.settings:
+  index.number_of_shards: 1
+  index.number_of_replicas: 0
+  index.refresh_interval: "30s"
+  index.codec: best_compression
+
+processors:
+- add_host_metadata:
+    when.not.contains.tags: forwarded
+- add_docker_metadata: ~
+- drop_fields:
+    fields: ["agent", "ecs", "host.architecture", "host.os.family"]
+
+queue.mem:
+  events: 4096
+  flush.min_events: 512
+  flush.timeout: 1s
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 3
+  permissions: 0644
