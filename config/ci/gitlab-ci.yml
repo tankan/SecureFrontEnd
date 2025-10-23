@@ -10,7 +10,7 @@ stages:
   - cleanup
 
 variables:
-  NODE_VERSION: "18"
+  NODE_VERSION: "22"
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: "/certs"
   REGISTRY: $CI_REGISTRY
@@ -115,7 +115,7 @@ unit_tests:
   needs: ["install_dependencies"]
   parallel:
     matrix:
-      - NODE_VERSION: ["16", "18", "20"]
+      - NODE_VERSION: ["20", "22", "24"]
   script:
     - npm run test:unit
   coverage: '/Lines\s*:\s*(\d+\.\d+)%/'

@@ -17,7 +17,7 @@ on:
           - production
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '22'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [16, 18, 20]
+        node-version: [20, 22, 24]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

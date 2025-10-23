@@ -361,7 +361,7 @@ async function main() {
 }
 
 // 如果直接运行此文件
-if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}`) {
+if (import.meta.url.endsWith('/server/index.js') || process.argv[1]?.endsWith('server/index.js')) {
   main();
 }
 

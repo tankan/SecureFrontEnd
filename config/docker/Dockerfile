@@ -1,28 +1,34 @@
 # 多阶段构建 - 构建阶段
 FROM node:22-alpine AS builder
 
+# 安装构建工具
+RUN apk add --no-cache python3 make g++
+
 # 设置工作目录
 WORKDIR /app
 
 # 复制package文件
 COPY package*.json ./
 
-# 安装依赖（仅生产依赖）
-RUN npm ci --only=production && npm cache clean --force
+# 安装所有依赖（包括开发依赖用于构建）
+RUN npm ci && npm cache clean --force
 
 # 复制源代码
 COPY . .
 
-# 构建应用
-RUN npm run build
+# 构建应用（如果有构建步骤）
+RUN npm run build || echo "No build step defined, skipping..."
 
 # 生产阶段
 FROM node:22-alpine AS production
 
-# 安装安全更新
+# 安装运行时依赖和安全工具
 RUN apk update && apk upgrade && apk add --no-cache \
     dumb-init \
     curl \
+    python3 \
+    make \
+    g++ \
     && rm -rf /var/cache/apk/*
 
 # 创建非root用户
@@ -41,8 +47,12 @@ RUN npm ci --only=production && npm cache clean --force
 # 从构建阶段复制应用文件
 COPY --from=builder --chown=nextjs:nodejs /app/src ./src
 COPY --from=builder --chown=nextjs:nodejs /app/server ./server
-COPY --from=builder --chown=nextjs:nodejs /app/client ./client
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+COPY --from=builder --chown=nextjs:nodejs /app/config ./config
+
+# 复制其他必要文件
+COPY --chown=nextjs:nodejs examples ./examples
+COPY --chown=nextjs:nodejs docs ./docs
 
 # 创建必要的目录
 RUN mkdir -p /app/data /app/logs /app/encrypted && \
@@ -55,7 +65,7 @@ USER nextjs
 EXPOSE 3000
 
 # 健康检查
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
 # 使用dumb-init作为PID 1

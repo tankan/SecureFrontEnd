@@ -6,7 +6,10 @@ SecureFrontEnd 提供了一套完整的 RESTful API，用于用户认证、密�
 
 ## 基础信息
 
-- **Base URL**: `http://localhost:3000/api/v1`
+- **Base URL**: 
+  - 开发环境: `http://localhost:3000/api/v1`
+  - 测试环境: `http://localhost:3010/api/v1`
+  - 生产环境: `http://localhost:3020/api/v1`
 - **Content-Type**: `application/json`
 - **认证方式**: JWT Bearer Token
 - **API版本**: v1

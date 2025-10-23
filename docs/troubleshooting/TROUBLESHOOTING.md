@@ -9,8 +9,13 @@
 首先运行基本的健康检查来确定问题范围：
 
 ```bash
-# 检查应用状态
+# 检查应用状态 (根据环境调整端口)
+# 开发环境
 curl http://localhost:3000/health
+# 测试环境
+curl http://localhost:3010/health
+# 生产环境
+curl http://localhost:3020/health
 
 # 检查详细健康报告
 curl http://localhost:3000/api/v1/health/detailed
@@ -18,6 +23,11 @@ curl http://localhost:3000/api/v1/health/detailed
 # 检查模块状态
 curl http://localhost:3000/api/v1/modules/status
 ```
+
+> **注意**: 上述示例使用开发环境端口 (3000)。请根据实际部署环境调整端口号：
+> - 开发环境: 3000
+> - 测试环境: 3010  
+> - 生产环境: 3020
 
 ### 日志文件位置
 
@@ -50,7 +60,7 @@ tail -f logs/modules.log
 
 1. **检查 Node.js 版本**
 ```bash
-node --version  # 应该是 18.0 或更高
+node --version  # 应该是 22.12.0 或更高
 npm --version   # 应该是 8.0 或更高
 ```
 

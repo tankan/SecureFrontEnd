@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   app:
-    build: ../..
+    build:
+      context: ../..
+      dockerfile: config/docker/Dockerfile
     environment:
       - NODE_ENV=development
       - JWT_SECRET=${JWT_SECRET}

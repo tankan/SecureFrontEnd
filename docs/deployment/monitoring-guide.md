@@ -48,6 +48,8 @@ npm run health:check:verbose
 
 部署完成后，可以通过以下地址访问各个服务：
 
+### 监控服务地址
+
 | 服务 | 地址 | 默认账号 | 说明 |
 |------|------|----------|------|
 | Prometheus | http://localhost:9090 | - | 指标监控和告警规则 |
@@ -55,6 +57,18 @@ npm run health:check:verbose
 | AlertManager | http://localhost:9093 | - | 告警管理 |
 | Elasticsearch | http://localhost:9200 | - | 日志存储 API |
 | Kibana | http://localhost:5601 | - | 日志分析界面 |
+
+### 应用服务地址
+
+| 环境 | 主应用 | API 接口 | 健康检查 |
+|------|--------|----------|----------|
+| 开发环境 | http://localhost:3000 | http://localhost:3000/api/v1 | http://localhost:3000/health |
+| 测试环境 | http://localhost:3010 | http://localhost:3010/api/v1 | http://localhost:3010/health |
+| 生产环境 | http://localhost:3020 | http://localhost:3020/api/v1 | http://localhost:3020/health |
+
+> **注意**: 完整的监控栈（Prometheus、Grafana、ELK等）仅在开发环境中启用。测试和生产环境仅运行核心应用服务。
+
+> 📖 **详细信息**: 查看 [部署指南](../DEPLOYMENT_GUIDE.md#服务访问地址) 获取完整的服务配置信息
 
 ## 监控配置
 

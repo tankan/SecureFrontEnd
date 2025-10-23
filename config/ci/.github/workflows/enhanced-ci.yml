@@ -10,7 +10,7 @@ on:
     - cron: '0 2 * * *'
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '22'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -96,7 +96,7 @@ jobs:
     name: Testing
     strategy:
       matrix:
-        node-version: [16, 18, 20]
+        node-version: [20, 22, 24]
         
     steps:
     - name: Checkout code
