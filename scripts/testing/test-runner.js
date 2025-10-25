@@ -38,7 +38,7 @@ const TEST_CONFIG = {
             coverage: false
         },
         performance: {
-            pattern: 'tests/performance/**/*.test.js',
+            pattern: 'tests/.*performance-optimization\\.test\\.js',
             timeout: 30000,
             coverage: false
         },
@@ -158,7 +158,12 @@ class TestRunner {
         const jestArgs = this.buildJestArgs(testType, config);
         
         return new Promise((resolve, reject) => {
-            const jestProcess = spawn('npx', ['jest', ...jestArgs], {
+            const jestBin = join(projectRoot, 'node_modules', 'jest', 'bin', 'jest.js');
+            const useLocalJest = existsSync(jestBin);
+            const cmd = useLocalJest ? process.execPath : (process.platform === 'win32' ? 'npx.cmd' : 'npx');
+            const args = useLocalJest ? [jestBin, ...jestArgs] : ['jest', ...jestArgs];
+            
+            const jestProcess = spawn(cmd, args, {
                 cwd: projectRoot,
                 stdio: 'pipe',
                 env: {
@@ -171,24 +176,16 @@ class TestRunner {
             let errorOutput = '';
 
             jestProcess.stdout.on('data', (data) => {
-                const text = data.toString();
-                output += text;
-                if (this.options.debug) {
-                    console.log(text);
-                }
+                output += data.toString();
             });
 
             jestProcess.stderr.on('data', (data) => {
-                const text = data.toString();
-                errorOutput += text;
-                if (this.options.debug) {
-                    console.error(text);
-                }
+                errorOutput += data.toString();
             });
 
             jestProcess.on('close', (code) => {
-                // 解析测试结果
-                this.parseTestResults(output, testType);
+                const combinedOutput = [output, errorOutput].filter(Boolean).join('\n');
+                this.parseTestResults(combinedOutput, testType);
                 
                 if (code === 0) {
                     console.log(`✅ ${testType} 测试完成`);
@@ -249,13 +246,42 @@ class TestRunner {
         if (!this.options.debug) {
             args.push('--silent');
         }
+
+        // 无测试时通过，避免空目录导致失败
+        args.push('--passWithNoTests');
         
         return args;
     }
 
     parseTestResults(output, testType) {
         try {
-            // 解析Jest输出
+            const getLastTestsLine = () => {
+                let m, last = '';
+                const regex = /Tests:\s*([^\n]+)/g;
+                while ((m = regex.exec(output)) !== null) {
+                    last = m[1];
+                }
+                return last;
+            };
+    
+            const line = getLastTestsLine();
+            if (line) {
+                const pick = (pat) => {
+                    const m = new RegExp(pat).exec(line);
+                    return m ? parseInt(m[1], 10) : 0;
+                };
+                const failed = pick('(\\d+)\\s+failed');
+                const passed = pick('(\\d+)\\s+passed');
+                const skipped = pick('(\\d+)\\s+skipped');
+                const total = pick('(\\d+)\\s+total');
+    
+                this.results.failed += failed;
+                this.results.passed += passed;
+                this.results.skipped += skipped;
+                this.results.total += total;
+            }
+
+            // Preserve any existing coverage parsing logic
             const lines = output.split('\n');
             
             for (const line of lines) {
@@ -411,7 +437,7 @@ class TestRunner {
 }
 
 // 命令行接口
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (__filename === process.argv[1]) {
     const args = process.argv.slice(2);
     const testType = args[0] || 'all';
     

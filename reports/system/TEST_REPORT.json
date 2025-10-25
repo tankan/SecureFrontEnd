@@ -1,0 +1,50 @@
+{
+  "timestamp": "2025-10-24T18:22:57.288Z",
+  "environment": {
+    "nodeVersion": "v22.12.0",
+    "platform": "win32",
+    "testMode": "test"
+  },
+  "results": {
+    "total": 12,
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0,
+    "coverage": null,
+    "duration": 32243
+  },
+  "configuration": {
+    "timeout": 30000,
+    "coverage": true,
+    "watch": false,
+    "debug": false,
+    "parallel": true,
+    "types": {
+      "unit": {
+        "pattern": "tests/unit/**/*.test.js",
+        "timeout": 5000,
+        "coverage": true
+      },
+      "integration": {
+        "pattern": "tests/integration/**/*.test.js",
+        "timeout": 15000,
+        "coverage": true
+      },
+      "e2e": {
+        "pattern": "tests/e2e/**/*.test.js",
+        "timeout": 60000,
+        "coverage": false
+      },
+      "performance": {
+        "pattern": "tests/.*performance-optimization\\.test\\.js",
+        "timeout": 30000,
+        "coverage": false
+      },
+      "security": {
+        "pattern": "tests/security/**/*.test.js",
+        "timeout": 20000,
+        "coverage": true
+      }
+    }
+  }
+}

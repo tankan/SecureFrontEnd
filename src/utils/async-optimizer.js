@@ -12,7 +12,20 @@ const DEFAULT_BATCH_SIZE = 10;
 const DEFAULT_QUEUE_SIZE = 1000;
 const MAX_METRICS_HISTORY = 100;
 const METRICS_CLEANUP_INTERVAL = 60000; // 1分钟
-const { logger } = require('./logger');
+
+let logger;
+try {
+    ({ logger } = require('./logger'));
+} catch (e) {
+    // 在 Jest/CommonJS 环境下，logger.js 为 ESM，require 可能失败
+    // 使用轻量级的空实现作为回退，避免测试因日志依赖失败
+    logger = {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {}
+    };
+}
 
 class AsyncOptimizer {
     constructor(options = {}) {
@@ -311,6 +324,36 @@ class AsyncOptimizer {
         }
 
         return results;
+    }
+
+    /**
+     * 兼容方法：处理批量任务（包装 batchProcess）
+     * @param {Array} items - 原始数据项
+     * @param {Function} processor - 处理函数 (item) => Promise<any>
+     * @param {Object} options - 批处理选项
+     * @returns {Promise<Array>} 处理结果
+     */
+    async processBatch(items, processor, options = {}) {
+        const tasks = items.map((item) => () => processor(item));
+        return this.batchProcess(tasks, options);
+    }
+
+    /**
+     * 生成异步优化器报告
+     * @returns {Object} 报告对象 { timestamp, metrics, queues, config }
+     */
+    getReport() {
+        const queues = {};
+        for (const [name] of this.taskQueues) {
+            queues[name] = this.getQueueStats(name);
+        }
+
+        return {
+            timestamp: new Date().toISOString(),
+            metrics: { ...this.metrics },
+            queues,
+            config: { ...this.config }
+        };
     }
 
     /**

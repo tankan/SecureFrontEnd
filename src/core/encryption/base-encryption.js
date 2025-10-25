@@ -171,6 +171,40 @@ export class BaseEncryption {
     }
 
     /**
+     * 常数时间比较（支持字符串和二进制）
+     * @param {string|Buffer|Uint8Array} a
+     * @param {string|Buffer|Uint8Array} b
+     * @returns {boolean}
+     */
+    constantTimeCompare(a, b) {
+        const toBuffer = v => {
+            if (Buffer.isBuffer(v)) return v;
+            if (v && (v.buffer instanceof ArrayBuffer || ArrayBuffer.isView(v))) {
+                return Buffer.from(v);
+            }
+            if (typeof v === 'string') return Buffer.from(v);
+            return null;
+        };
+
+        const bufA = toBuffer(a);
+        const bufB = toBuffer(b);
+
+        if (!bufA || !bufB) return false;
+        if (bufA.length !== bufB.length) return false;
+
+        try {
+            return crypto.timingSafeEqual(bufA, bufB);
+        } catch {
+            // 回退：逐字节比较，保持常数时间特性
+            let result = 0;
+            for (let i = 0; i < bufA.length; i++) {
+                result |= bufA[i] ^ bufB[i];
+            }
+            return result === 0;
+        }
+    }
+
+    /**
      * 启用Web Workers进行并行处理
      * @param {number} workerCount - Worker数量，默认为CPU核心数
      */

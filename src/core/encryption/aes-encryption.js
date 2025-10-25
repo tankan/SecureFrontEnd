@@ -33,7 +33,9 @@ export class AESEncryption extends BaseEncryption {
         try {
             const keyBuffer = Buffer.isBuffer(keyData.key)
                 ? keyData.key
-                : Buffer.from(keyData.key, 'base64');
+                : (keyData.key && (keyData.key.buffer instanceof ArrayBuffer || ArrayBuffer.isView(keyData.key))
+                    ? Buffer.from(keyData.key)
+                    : Buffer.from(keyData.key, 'base64'));
             const computedHash = crypto.createHash('sha256').update(keyBuffer).digest('hex');
 
             // 使用常数时间比较防止时间攻击
@@ -106,18 +108,30 @@ export class AESEncryption extends BaseEncryption {
                     : crypto.scryptSync(keyBuffer.toString('hex'), 'salt', 32);
 
             // 生成随机IV（每次加密都不同）
-            const ivBuffer = iv || crypto.randomBytes(this.ivSize);
+            let ivBuffer;
+            if (!iv) {
+                ivBuffer = crypto.randomBytes(this.ivSize);
+            } else if (Buffer.isBuffer(iv)) {
+                ivBuffer = iv;
+            } else if (typeof iv === 'string') {
+                ivBuffer = Buffer.from(iv, 'hex');
+            } else if (ArrayBuffer.isView(iv)) {
+                ivBuffer = Buffer.from(iv.buffer || iv);
+            } else if (typeof iv === 'object' && iv.iv) {
+                ivBuffer = Buffer.isBuffer(iv.iv) ? iv.iv : Buffer.from(iv.iv, 'hex');
+            } else {
+                ivBuffer = crypto.randomBytes(this.ivSize);
+            }
 
-            // 使用AES-256-GCM进行加密
-            const cipher = crypto.createCipher('aes-256-gcm', finalKey);
+            // 使用AES-256-GCM进行加密（使用 createCipheriv 并显式传入 IV）
+            const cipher = crypto.createCipheriv('aes-256-gcm', finalKey, ivBuffer);
 
-            cipher.setAAD(Buffer.from('SecureFrontEnd', 'utf8')); // 附加认证数据
+            cipher.setAAD(Buffer.from('SecureFrontEnd', 'utf8'));
 
             let encrypted = cipher.update(data, 'utf8', 'hex');
 
             encrypted += cipher.final('hex');
 
-            // 获取认证标签
             const authTag = cipher.getAuthTag();
 
             return {
@@ -125,7 +139,7 @@ export class AESEncryption extends BaseEncryption {
                 iv: ivBuffer.toString('hex'),
                 authTag: authTag.toString('hex'),
                 algorithm: 'aes-256-gcm',
-                keyHash // 包含密钥哈希用于验证
+                keyHash
             };
         } catch (error) {
             // 如果GCM不可用，使用CBC模式作为备选
@@ -186,6 +200,8 @@ export class AESEncryption extends BaseEncryption {
         }
 
         // 主线程处理 - 支持GCM和CBC模式
+        const startTime = process.hrtime.bigint();
+        const minTimeNs = BigInt(5_000_000); // 5ms 固定最小延迟，降低时间差异
         try {
             const decryptionKey = key || this.masterKey;
 
@@ -202,7 +218,9 @@ export class AESEncryption extends BaseEncryption {
                 }
                 keyBuffer = Buffer.isBuffer(decryptionKey.key)
                     ? decryptionKey.key
-                    : Buffer.from(decryptionKey.key, 'base64');
+                    : (decryptionKey.key && (decryptionKey.key.buffer instanceof ArrayBuffer || ArrayBuffer.isView(decryptionKey.key))
+                        ? Buffer.from(decryptionKey.key)
+                        : Buffer.from(decryptionKey.key, 'base64'));
             } else {
                 keyBuffer = Buffer.isBuffer(decryptionKey)
                     ? decryptionKey
@@ -239,15 +257,15 @@ export class AESEncryption extends BaseEncryption {
                 algorithm = 'legacy';
             }
 
-            // 添加固定延迟以防止时间攻击
-            const startTime = process.hrtime.bigint();
-
             let decrypted;
 
             if (algorithm === 'aes-256-gcm' && ivHex && authTagHex) {
-                // GCM模式解密
-                const decipher = crypto.createDecipher('aes-256-gcm', finalKey);
-
+                // GCM模式解密（使用 createDecipheriv 并显式传入 IV）
+                const decipher = crypto.createDecipheriv(
+                    'aes-256-gcm',
+                    finalKey,
+                    Buffer.from(ivHex, 'hex')
+                );
                 decipher.setAAD(Buffer.from('SecureFrontEnd', 'utf8'));
                 decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
 
@@ -271,20 +289,19 @@ export class AESEncryption extends BaseEncryption {
 
             // 确保解密操作至少花费固定时间（防止时间攻击）
             const elapsedTime = process.hrtime.bigint() - startTime;
-            const minTimeNs = BigInt(1000000); // 1ms
-
             if (elapsedTime < minTimeNs) {
                 const delayNs = minTimeNs - elapsedTime;
-
-                await new Promise(resolve =>
-                    setTimeout(resolve, Number(delayNs / BigInt(1000000)))
-                );
+                await new Promise(resolve => setTimeout(resolve, Number(delayNs / BigInt(1_000_000))));
             }
 
             return decrypted;
         } catch (error) {
             // 即使出错也要保持固定的时间延迟
-            await new Promise(resolve => setTimeout(resolve, 1));
+            const elapsedTime = process.hrtime.bigint() - startTime;
+            if (elapsedTime < minTimeNs) {
+                const delayNs = minTimeNs - elapsedTime;
+                await new Promise(resolve => setTimeout(resolve, Number(delayNs / BigInt(1_000_000))));
+            }
             throw new Error(`AES解密失败: ${error.message}`);
         }
     }

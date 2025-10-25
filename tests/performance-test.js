@@ -158,23 +158,48 @@ class PerformanceTest {
       privateKeySize: `${Buffer.from(dilithiumKeyPair.privateKey, 'hex').length} bytes`
     });
     
-    // 签名性能测试
-    const signStart = performance.now();
+    // 签名性能测试（PQCProvider不可用时跳过）
     let signature;
-    for (let i = 0; i < iterations; i++) {
-      signature = this.encryption.signQuantumSafe(testMessage, dilithiumKeyPair.privateKey);
+    let signDuration = 0;
+    let signThroughput = null;
+    try {
+      const signStart = performance.now();
+      for (let i = 0; i < iterations; i++) {
+        signature = this.encryption.signQuantumSafe(testMessage, dilithiumKeyPair.privateKey);
+      }
+      signDuration = performance.now() - signStart;
+      signThroughput = (iterations * 1000) / signDuration;
+      
+      this.recordTest('量子安全数字签名', signDuration, signThroughput, {
+        messageLength: `${testMessage.length} chars`,
+        iterations,
+        avgPerOperation: `${(signDuration / iterations).toFixed(3)}ms`,
+        signatureSize: `${signature.length} chars`
+      });
+    } catch (err) {
+      const msg = err && err.message ? err.message : String(err);
+      const providerUnavailable = /PQCProvider|liboqs|Cannot find module|不可用/i.test(msg);
+      if (providerUnavailable) {
+        this.recordTest('量子安全数字签名', 0, null, {
+          messageLength: `${testMessage.length} chars`,
+          iterations,
+          note: '跳过：PQCProvider 不可用（请安装 liboqs-node）'
+        });
+      } else {
+        this.recordTest('量子安全数字签名', 0, null, { error: msg });
+      }
     }
-    const signDuration = performance.now() - signStart;
-    const signThroughput = (iterations * 1000) / signDuration;
     
-    this.recordTest('量子安全数字签名', signDuration, signThroughput, {
-      messageLength: `${testMessage.length} chars`,
-      iterations,
-      avgPerOperation: `${(signDuration / iterations).toFixed(3)}ms`,
-      signatureSize: `${signature.length} chars`
-    });
+    // 验证性能测试（若签名跳过则同时跳过）
+    if (!signature) {
+      this.recordTest('量子安全签名验证', 0, null, {
+        messageLength: `${testMessage.length} chars`,
+        iterations,
+        note: '跳过：无有效签名或PQCProvider不可用'
+      });
+      return;
+    }
     
-    // 验证性能测试
     const verifyStart = performance.now();
     for (let i = 0; i < iterations; i++) {
       this.encryption.verifyQuantumSafeSignature(testMessage, signature, dilithiumKeyPair.publicKey);

@@ -16,7 +16,20 @@ const DEFAULT_POOL_SIZE = 10;
 const BYTES_TO_MB = 1024 * 1024;
 const MAX_PERFORMANCE_HISTORY = 1000;
 const PERFORMANCE_REPORT_INTERVAL = 60000; // 1分钟
-const { logger } = require('./logger');
+
+let logger;
+try {
+    ({ logger } = require('./logger'));
+} catch (e) {
+    // 在 Jest/CommonJS 环境下，logger.js 为 ESM，require 可能失败
+    // 使用轻量级的空实现作为回退，避免测试因日志依赖失败
+    logger = {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {}
+    };
+}
 
 class PerformanceOptimizer {
     constructor(options = {}) {

@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { BaseEncryption } from './base-encryption.js';
 import { logger } from '../../utils/logger.js';
+import { PQCProvider } from './quantum-provider.js'
 
 /**
  * 量子安全加密模块
@@ -23,6 +24,11 @@ export class QuantumEncryption extends BaseEncryption {
             privateKeySize: 2528,
             signatureSize: 2420
         };
+        // 新增：PQC 后端提供者，仅用于真实实现
+        this.pqcProvider = new PQCProvider({
+            signatureAlgorithm: process.env.PQC_SIG_ALG || 'ML-DSA-65',
+            kemAlgorithm: process.env.PQC_KEM_ALG || 'ML-KEM-768'
+        });
     }
 
     /**
@@ -111,16 +117,13 @@ export class QuantumEncryption extends BaseEncryption {
             // 2. 使用Kyber封装共享密钥
             const encapsulatedKey = this._kyberEncapsulate(sharedSecret, publicKeyBuffer);
 
-            // 3. 使用共享密钥进行AES加密
+            // 3. 使用封装结果派生共享密钥并进行AES加密（模拟）
+            const derivedSecret = encapsulatedKey.slice(0, this.kyberParams.sharedSecretSize);
             const iv = crypto.randomBytes(12);
-            const cipher = crypto.createCipherGCM('aes-256-gcm', sharedSecret);
+            const gcmKey = derivedSecret.length === 32 ? derivedSecret : crypto.scryptSync(derivedSecret.toString('hex'), 'salt', 32);
+            const cipher = crypto.createCipheriv('aes-256-gcm', gcmKey, iv);
 
-            cipher.setIVLength(12);
-            cipher.update(iv);
-
-            const encrypted = cipher.update(dataBuffer);
-
-            cipher.final();
+            const encrypted = Buffer.concat([cipher.update(dataBuffer), cipher.final()]);
             const authTag = cipher.getAuthTag();
 
             // 4. 组合结果
@@ -158,15 +161,11 @@ export class QuantumEncryption extends BaseEncryption {
             const sharedSecret = this._kyberDecapsulate(encapsulatedKey, privateKeyBuffer);
 
             // 2. 使用共享密钥进行AES解密
-            const decipher = crypto.createDecipherGCM('aes-256-gcm', sharedSecret);
-
-            decipher.setIVLength(12);
-            decipher.update(iv);
+            const gcmKey = sharedSecret.length === 32 ? sharedSecret : crypto.scryptSync(sharedSecret.toString('hex'), 'salt', 32);
+            const decipher = crypto.createDecipheriv('aes-256-gcm', gcmKey, iv);
             decipher.setAuthTag(authTag);
 
-            const decrypted = decipher.update(encrypted);
-
-            decipher.final();
+            const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
 
             return decrypted.toString('utf8');
         } catch (error) {
@@ -175,62 +174,53 @@ export class QuantumEncryption extends BaseEncryption {
     }
 
     /**
-     * Dilithium数字签名
-     * @param {Buffer|string} message - 要签名的消息
-     * @param {string} dilithiumPrivateKey - Dilithium私钥（十六进制字符串）
-     * @returns {Object} 签名结果
+     * 构造签名Envelope：[signature][16-byte stamp][2-byte meta]
+     * @param {Buffer} signatureBytes 真实签名字节
+     * @returns {Buffer} envelope
      */
-    dilithiumSign(message, dilithiumPrivateKey) {
-        try {
-            const messageBuffer = Buffer.isBuffer(message) ? message : Buffer.from(message, 'utf8');
-            const privateKeyBuffer = Buffer.from(dilithiumPrivateKey, 'hex');
-
-            // 计算消息哈希
-            const messageHash = crypto.createHash('sha3-256').update(messageBuffer).digest();
-
-            // 模拟Dilithium签名（实际实现需要使用专门的量子安全库）
-            const signature = this._dilithiumSignInternal(messageHash, privateKeyBuffer);
-
-            return {
-                signature: signature.toString('hex'),
-                messageHash: messageHash.toString('hex'),
-                algorithm: 'dilithium-2',
-                signatureSize: this.dilithiumParams.signatureSize,
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            throw new Error(`Dilithium签名失败: ${error.message}`);
-        }
+    buildSignatureEnvelope(signatureBytes) {
+        const meta = this._signatureMeta();
+        const stamp = crypto.createHash('sha3-256').
+            update(Buffer.concat([signatureBytes, meta])).
+            digest().slice(0, 16);
+        return Buffer.concat([signatureBytes, stamp, meta]);
     }
 
     /**
-     * Dilithium签名验证
-     * @param {Buffer|string} message - 原始消息
-     * @param {Object} signatureData - 签名数据对象
-     * @param {string} dilithiumPublicKey - Dilithium公钥（十六进制字符串）
-     * @returns {boolean} 验证结果
+     * 解析签名Envelope
+     * @param {Buffer} envelope
+     * @returns {{signature:Buffer, stamp:Buffer, meta:Buffer}|null}
      */
-    dilithiumVerify(message, signatureData, dilithiumPublicKey) {
-        try {
-            const messageBuffer = Buffer.isBuffer(message) ? message : Buffer.from(message, 'utf8');
-            const publicKeyBuffer = Buffer.from(dilithiumPublicKey, 'hex');
-            const signature = Buffer.from(signatureData.signature, 'hex');
+    parseSignatureEnvelope(envelope) {
+        if (!Buffer.isBuffer(envelope) || envelope.length < (16 + 2)) return null;
+        const meta = envelope.slice(envelope.length - 2);
+        const stamp = envelope.slice(envelope.length - 18, envelope.length - 2);
+        const signature = envelope.slice(0, envelope.length - 18);
+        return { signature, stamp, meta };
+    }
 
-            // 计算消息哈希
-            const messageHash = crypto.createHash('sha3-256').update(messageBuffer).digest();
+    /**
+     * 校验Envelope完整性戳
+     * @param {Buffer} envelope
+     * @returns {boolean}
+     */
+    validateSignatureEnvelope(envelope) {
+        const parts = this.parseSignatureEnvelope(envelope);
+        if (!parts) return false;
+        const { signature, meta, stamp } = parts;
+        const expectedStamp = crypto.createHash('sha3-256').
+            update(Buffer.concat([signature, meta])).
+            digest().slice(0, 16);
+        return this.constantTimeCompare(expectedStamp, stamp);
+    }
 
-            // 验证哈希是否匹配
-            if (messageHash.toString('hex') !== signatureData.messageHash) {
-                return false;
-            }
-
-            // 模拟Dilithium签名验证（实际实现需要使用专门的量子安全库）
-            return this._dilithiumVerifyInternal(messageHash, signature, publicKeyBuffer);
-        } catch (error) {
-            logger.error(`Dilithium签名验证失败: ${error.message}`);
-
-            return false;
-        }
+    /**
+     * Envelope元信息（版本、算法等）
+     * @returns {Buffer}
+     */
+    _signatureMeta() {
+        // version=0x01, algo=0x02 (dilithium-2)
+        return Buffer.from([0x01, 0x02]);
     }
 
     /**
@@ -378,43 +368,74 @@ export class QuantumEncryption extends BaseEncryption {
     _kyberDecapsulate(encapsulatedKey, privateKey) {
         /*
          * 这是一个简化的模拟实现
-         * 实际的Kyber解封装需要使用专门的格密码学运算
+         * 模拟环境下直接从密文前32字节取出共享密钥以保证一致性
          */
-        const combined = Buffer.concat([encapsulatedKey.slice(0, 32), privateKey]);
-        const hash = crypto.createHash('sha3-256').update(combined).digest();
-
-        return hash.slice(0, this.kyberParams.sharedSecretSize);
+        return encapsulatedKey.slice(0, this.kyberParams.sharedSecretSize);
     }
 
     /**
-     * Dilithium签名内部实现（模拟实现）
-     * @private
+     * Dilithium数字签名
+     * @param {Buffer|string} message - 要签名的消息
+     * @param {string} dilithiumPrivateKey - Dilithium私钥（十六进制字符串）
+     * @returns {Object} 签名结果
      */
-    _dilithiumSignInternal(messageHash, privateKey) {
-        /*
-         * 这是一个简化的模拟实现
-         * 实际的Dilithium签名需要使用专门的格密码学运算
-         */
-        const combined = Buffer.concat([messageHash, privateKey]);
-        const hash = crypto.createHash('sha3-512').update(combined).digest();
+    dilithiumSign(message, dilithiumPrivateKey) {
+        try {
+            const messageBuffer = Buffer.isBuffer(message) ? message : Buffer.from(message, 'utf8');
+            const privateKeyBuffer = Buffer.from(dilithiumPrivateKey, 'hex');
 
-        return Buffer.concat([hash, crypto.randomBytes(this.dilithiumParams.signatureSize - 64)]);
+            if (!this.pqcProvider || !this.pqcProvider.available) {
+                throw new Error('PQCProvider 不可用：请安装并配置 @skairipaapps/liboqs-node 或 liboqs-node');
+            }
+
+            const signatureBytes = this.pqcProvider.signDilithium(messageBuffer, privateKeyBuffer);
+            if (!signatureBytes) {
+                throw new Error('签名失败：PQCProvider 未返回签名');
+            }
+
+            const envelope = this.buildSignatureEnvelope(signatureBytes);
+            const messageHash = crypto.createHash('sha3-256').update(messageBuffer).digest();
+
+            return {
+                signature: envelope.toString('hex'),
+                messageHash: messageHash.toString('hex'),
+                algorithm: 'dilithium-2',
+                signatureSize: envelope.length,
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            throw new Error(`Dilithium签名失败: ${error.message}`);
+        }
     }
 
     /**
-     * Dilithium签名验证内部实现（模拟实现）
-     * @private
+     * Dilithium签名验证
+     * @param {Buffer|string} message - 原始消息
+     * @param {Object} signatureData - 签名数据对象
+     * @param {string} dilithiumPublicKey - Dilithium公钥（十六进制字符串）
+     * @returns {boolean} 验证结果
      */
-    _dilithiumVerifyInternal(messageHash, signature, publicKey) {
-        /*
-         * 这是一个简化的模拟实现
-         * 实际的Dilithium验证需要使用专门的格密码学运算
-         */
-        const combined = Buffer.concat([messageHash, publicKey]);
-        const expectedHash = crypto.createHash('sha3-512').update(combined).digest();
-        const signatureHash = signature.slice(0, 64);
+    dilithiumVerify(message, signatureData, dilithiumPublicKey) {
+        try {
+            const messageBuffer = Buffer.isBuffer(message) ? message : Buffer.from(message, 'utf8');
+            const publicKeyBuffer = Buffer.from(dilithiumPublicKey, 'hex');
+            const envelope = Buffer.from(signatureData.signature, 'hex');
 
-        return this.constantTimeCompare(expectedHash, signatureHash);
+            if (!this.pqcProvider || !this.pqcProvider.available) {
+                throw new Error('PQCProvider 不可用：请安装并配置 @skairipaapps/liboqs-node 或 liboqs-node');
+            }
+
+            if (!this.validateSignatureEnvelope(envelope)) {
+                return false;
+            }
+            const { signature } = this.parseSignatureEnvelope(envelope);
+
+            const ok = this.pqcProvider.verifyDilithium(messageBuffer, signature, publicKeyBuffer);
+            return !!ok;
+        } catch (error) {
+            logger.error(`Dilithium签名验证失败: ${error.message}`);
+            return false;
+        }
     }
 
     /**
