@@ -11,8 +11,30 @@ export class KeyManagementService extends EventEmitter {
   constructor(options = {}) {
     super();
     
+    // 初始化logger作为实例属性
+    this.logger = options.logger || console;
+    this.logger.info('KeyManagementService constructor called');
+    this.logger.info('options.masterKey exists:', { exists: !!options.masterKey });
+    this.logger.info('options.masterKey type:', { type: typeof options.masterKey });
+    
+    // 确保masterKey是Buffer类型
+    let masterKey = options.masterKey;
+    if (!masterKey) {
+      this.logger.info('No masterKey provided, generating new one');
+      masterKey = this.generateMasterKey();
+    } else if (typeof masterKey === 'string') {
+      this.logger.info('Converting string masterKey to Buffer');
+      masterKey = Buffer.from(masterKey, 'hex');
+    } else if (!Buffer.isBuffer(masterKey)) {
+      this.logger.info('Converting non-Buffer masterKey to Buffer');
+      masterKey = Buffer.from(masterKey);
+    }
+    
+    this.logger.info('Final masterKey length:', { length: masterKey.length });
+    this.logger.info('Final masterKey is Buffer:', { isBuffer: Buffer.isBuffer(masterKey) });
+    
     this.config = {
-      masterKey: options.masterKey || this.generateMasterKey(),
+      masterKey: masterKey, // 确保使用转换后的Buffer
       keyRotationInterval: options.keyRotationInterval || '7d', // 7天
       keyDerivationIterations: options.keyDerivationIterations || 100000,
       keySize: options.keySize || 32, // 256 bits
@@ -22,7 +44,11 @@ export class KeyManagementService extends EventEmitter {
       ...options
     };
 
+    this.logger.info('Config masterKey exists after assignment:', { exists: !!this.config.masterKey });
+    this.logger.info('Config masterKey length after assignment:', { length: this.config.masterKey?.length });
+
     this.database = options.database;
+    this.logger = options.logger || console; // 使用传入的logger或默认console
     this.keyCache = new Map();
     this.rotationTimer = null;
     this.isInitialized = false;
@@ -163,6 +189,15 @@ export class KeyManagementService extends EventEmitter {
    */
   async generateKey(options = {}) {
     try {
+      // 使用winston logger而不是console.log
+      this.logger.info('=== DEBUG: generateKey called ===');
+      this.logger.info('Options keys:', { keys: Object.keys(options) });
+      this.logger.info('this.config exists:', { exists: !!this.config });
+      this.logger.info('this.config.masterKey exists:', { exists: !!this.config.masterKey });
+      this.logger.info('this.config.masterKey type:', { type: typeof this.config.masterKey });
+      this.logger.info('this.config.masterKey is Buffer:', { isBuffer: Buffer.isBuffer(this.config.masterKey) });
+      this.logger.info('this.config.masterKey length:', { length: this.config.masterKey ? this.config.masterKey.length : 'N/A' });
+      
       const keyId = options.keyId || this.generateKeyId();
       const purpose = options.purpose || 'resource_encryption';
       const algorithm = options.algorithm || this.config.algorithm;
@@ -592,8 +627,18 @@ export class KeyManagementService extends EventEmitter {
    * 加密密钥数据用于存储
    */
   encryptKeyData(keyData) {
-    const cipher = crypto.createCipher('aes-256-gcm', this.config.masterKey);
+    this.logger.info('encryptKeyData called');
+    this.logger.info('this.config.masterKey exists:', { exists: !!this.config.masterKey });
+    this.logger.info('masterKey type:', { type: typeof this.config.masterKey });
+    this.logger.info('masterKey is Buffer:', { isBuffer: Buffer.isBuffer(this.config.masterKey) });
+    this.logger.info('masterKey length:', { length: this.config.masterKey ? this.config.masterKey.length : 'undefined' });
+    
+    if (!this.config.masterKey) {
+      throw new Error('Master key is not set');
+    }
+    
     const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-gcm', this.config.masterKey, iv);
     cipher.setAAD(Buffer.from('key-data'));
     
     let encrypted = cipher.update(keyData);
@@ -613,7 +658,7 @@ export class KeyManagementService extends EventEmitter {
     const tag = buffer.slice(-16);
     const encrypted = buffer.slice(16, -16);
     
-    const decipher = crypto.createDecipher('aes-256-gcm', this.config.masterKey);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', this.config.masterKey, iv);
     decipher.setAuthTag(tag);
     decipher.setAAD(Buffer.from('key-data'));
     

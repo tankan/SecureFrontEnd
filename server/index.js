@@ -257,9 +257,14 @@ class SecureResourceServer {
       await this.databaseService.initialize();
 
       // 初始化密钥管理服务
+      this.logger.info('About to initialize KeyManagementService');
+      this.logger.info('ENCRYPTION_KEY exists:', { exists: !!process.env.ENCRYPTION_KEY });
+      this.logger.info('ENCRYPTION_KEY length:', { length: process.env.ENCRYPTION_KEY?.length });
+      
       this.keyManagementService = new KeyManagementService({
         database: this.databaseService,
-        masterKey: process.env.MASTER_KEY,
+        logger: this.logger, // 传递logger实例
+        masterKey: process.env.ENCRYPTION_KEY,
         keyRotationInterval: process.env.KEY_ROTATION_INTERVAL || '7d'
       });
       await this.keyManagementService.initialize();

@@ -9,6 +9,11 @@ services:
       - NODE_ENV=development
       - JWT_SECRET=${JWT_SECRET}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=secure_frontend
+      - DB_USER=postgres
+      - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
       - postgres
       - redis
@@ -26,6 +31,8 @@ services:
     image: ${POSTGRES_IMAGE:-postgres}:${POSTGRES_TAG_DEV:-15.13-alpine}
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=secure_frontend
+      - POSTGRES_USER=postgres
     ports:
       - "5432:5432"
 

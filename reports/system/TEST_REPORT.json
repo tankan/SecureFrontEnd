@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-10-24T18:22:57.288Z",
+  "timestamp": "2025-10-25T03:52:54.951Z",
   "environment": {
     "nodeVersion": "v22.12.0",
     "platform": "win32",
@@ -11,7 +11,7 @@
     "failed": 0,
     "skipped": 0,
     "coverage": null,
-    "duration": 32243
+    "duration": 31606
   },
   "configuration": {
     "timeout": 30000,

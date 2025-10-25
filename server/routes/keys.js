@@ -108,6 +108,9 @@ router.post('/generate', asyncHandler(async (req, res) => {
     }
 
     // 生成密钥
+    logger.info('=== ROUTE DEBUG: About to call generateKey ===');
+    logger.info('keyManagement exists:', { exists: !!keyManagement });
+    logger.info('generateKey method exists:', { type: typeof keyManagement.generateKey });
     const keyInfo = await keyManagement.generateKey({
       userId,
       purpose,
@@ -115,6 +118,7 @@ router.post('/generate', asyncHandler(async (req, res) => {
       resourceId,
       expiresAt
     });
+    logger.info('=== ROUTE DEBUG: generateKey completed ===');
 
     // 记录密钥生成
     await keyManagement.logAccess({

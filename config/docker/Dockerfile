@@ -1,8 +1,8 @@
 # 多阶段构建 - 构建阶段
-FROM node:22-alpine AS builder
+FROM node:20-alpine AS builder
 
 # 安装构建工具
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache python3 py3-setuptools make g++
 
 # 设置工作目录
 WORKDIR /app
@@ -20,13 +20,14 @@ COPY . .
 RUN npm run build || echo "No build step defined, skipping..."
 
 # 生产阶段
-FROM node:22-alpine AS production
+FROM node:20-alpine AS production
 
-# 安装运行时依赖和安全工具
+# 安装运行时依赖、安全工具和构建工具（用于sqlite3编译）
 RUN apk update && apk upgrade && apk add --no-cache \
     dumb-init \
     curl \
     python3 \
+    py3-setuptools \
     make \
     g++ \
     && rm -rf /var/cache/apk/*
@@ -49,6 +50,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/src ./src
 COPY --from=builder --chown=nextjs:nodejs /app/server ./server
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 COPY --from=builder --chown=nextjs:nodejs /app/config ./config
+COPY --from=builder --chown=nextjs:nodejs /app/client ./client
 
 # 复制其他必要文件
 COPY --chown=nextjs:nodejs examples ./examples
